@@ -11690,7 +11690,14 @@ function startSection() {
   const arr = progress[cur.id][cur.section];
   const pending = idxs.filter(i => arr[i] !== true);
   const solved = idxs.filter(i => arr[i] === true);
-  cur.order = pending.length ? [...shuffle(pending), ...shuffle(solved)] : shuffle(idxs);
+  
+  // Если у секции стоит shuffle: false (как в видеоуроках) — сохраняем строгий порядок по таймлайну!
+  if (sec.shuffle === false) {
+    cur.order = pending.length ? [...pending, ...solved] : idxs;
+  } else {
+    cur.order = pending.length ? [...shuffle(pending), ...shuffle(solved)] : shuffle(idxs);
+  }
+  
   cur.index = 0;
   store(LAST_KEY, { id: cur.id, section: cur.section });
   render();
