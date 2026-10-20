@@ -129,15 +129,6 @@
 }
 
 /* ---------- Вкладки уровней (табы) ---------- */
-.level-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin: 18px -16px 14px;
-  padding: 4px 16px;
-}
-.level-tabs::-webkit-scrollbar { display: none; }
 .level-tab {
   flex: 0 0 auto;
   height: 38px;
@@ -164,6 +155,159 @@
 .level-tab[data-tab="b2"].active { background: var(--flag-red); border-color: var(--flag-red); color: #fff; }
 .level-tab[data-tab="c1"].active { background: #7b2cbf; border-color: #7b2cbf; color: #fff; }
 .level-tab[data-tab="vid"].active { background: var(--sign-yellow); border-color: #a87700; color: #1b1b1b; }
+
+
+/* ---------- Новая шапка и панель прогресса ---------- */
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0 14px;
+}
+.brand {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.brand span { color: var(--flag-red); }
+.header-badge {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+}
+
+/* Карточка прогресса с круговым индикатором */
+.progress-card {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 16px;
+  align-items: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+}
+.progress-ring-wrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+}
+.progress-ring {
+  transform: rotate(-90deg);
+  width: 68px;
+  height: 68px;
+}
+.progress-ring circle {
+  fill: none;
+  stroke-width: 5.5;
+}
+.progress-ring .bg { stroke: var(--surface-2); }
+.progress-ring .bar-ring {
+  stroke: var(--flag-red);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+.progress-ring-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+}
+.progress-info h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.progress-info p {
+  margin: 2px 0 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.continue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  border: 1px solid var(--line);
+  transition: background 0.15s, transform 0.1s;
+}
+.continue-chip:active { transform: scale(0.97); }
+.continue-chip b { color: var(--flag-red); }
+
+/* 5 табов уровней без горизонтального скролла */
+.level-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 18px 0 16px;
+}
+.level-tab {
+  height: 44px;
+  padding: 2px 0;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  font-family: var(--display);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.level-tab .tab-title {
+  font-size: clamp(11px, 2.8vw, 13px);
+  font-weight: 700;
+  color: var(--ink);
+}
+.level-tab .tab-sub {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-family: var(--text);
+}
+.level-tab:active { transform: scale(0.96); }
+
+/* Цвета активных вкладок */
+.level-tab.active { color: #fff; }
+.level-tab.active .tab-title,
+.level-tab.active .tab-sub { color: #fff; }
+
+.level-tab[data-tab="a2"].active  { background: var(--green);     border-color: var(--green); }
+.level-tab[data-tab="b1"].active  { background: var(--flag-blue); border-color: var(--flag-blue); }
+.level-tab[data-tab="b2"].active  { background: var(--flag-red);  border-color: var(--flag-red); }
+.level-tab[data-tab="c1"].active  { background: #7b2cbf;          border-color: #7b2cbf; }
+.level-tab[data-tab="lex"].active { background: #d06015;          border-color: #d06015; }
+
+/* Стиль ветки Лексика */
+.module-title.l-lex::before { background: #d06015; }
+.route.l-lex::before        { background: #d06015; }
+.route.l-lex li::before     { border-color: #d06015; }
+.route.l-lex .lc-stop       { color: #d06015; }
+
 
 @keyframes speak-pulse {
   from { transform: scale(1); }
@@ -11578,21 +11722,18 @@ Object.assign(ICONS, {
 
 // Объединяем базы уроков
 Object.assign(LESSONS, NEW_LESSONS);
-const NEW_IDS = Object.keys(NEW_LESSONS); // <--- ВОТ ЭТО ИСПРАВЛЯЕТ БЕЛЫЙ ЭКРАН
+const NEW_IDS = Object.keys(NEW_LESSONS);
 
-let activeTab = load("srpski-active-tab", "all");
-
-
-// 4 методические линии (32 урока от базы к мастерству)
+// Линия 1: A2 (Базовая грамматика)
 const LINE_A2_IDS = [
   "lokativ-akuzativ",
   "proslo-vreme",
   "glagolski-oblici",
   "glagolski-vid",
-  "povratni-glagoli",
-  "obracanje"
+  "povratni-glagoli"
 ];
 
+// Линия 2: B1 (Падежи и каркас)
 const LINE_B1_IDS = [
   "oj-zenski",
   "klik-start",
@@ -11608,6 +11749,7 @@ const LINE_B1_IDS = [
   "akuzativ-genitiv-mn"
 ];
 
+// Линия 3: B2 (Сложные конструкции и согласование)
 const LINE_B2_IDS = [
   "deca-slaganje",
   "deca-padezi",
@@ -11616,11 +11758,10 @@ const LINE_B2_IDS = [
   "glagolsko-upravljanje-2",
   "nego-a",
   "futur-ako",
-  "klitike-zavisne",
-  "razgovorni",
-  "rusizmy"
+  "klitike-zavisne"
 ];
 
+// Линия 4: C1 (Кондиционалы, связки, мастерство)
 const LINE_C1_IDS = [
   "nestvarni-uslov",
   "veznici",
@@ -11628,15 +11769,23 @@ const LINE_C1_IDS = [
   "predlozi"
 ];
 
-// Видеоуроки (Njuz Net)
-const LINE_VID_IDS = [
-  "video-njuz-tramp",
-  "video-njuz-kamen",
-  "video-njuz-batinasi"
+// Линия 5: Лексика (Обращения, разговорная речь, русизмы)
+const LINE_LEX_IDS = [
+  "obracanje",
+  "razgovorni",
+  "rusizmy"
 ];
 
-// Полный реестр всех остановок
-const ALL_IDS = [...LINE_A2_IDS, ...LINE_B1_IDS, ...LINE_B2_IDS, ...LINE_C1_IDS, ...LINE_VID_IDS];
+// Полный реестр всех уроков (без видео)
+const ALL_IDS = [...LINE_A2_IDS, ...LINE_B1_IDS, ...LINE_B2_IDS, ...LINE_C1_IDS, ...LINE_LEX_IDS];
+
+// Защита от старого значения "all": если в памяти старая вкладка, сбрасываем на "a2"
+const VALID_TABS = ["a2", "b1", "b2", "c1", "lex"];
+let activeTab = load("srpski-active-tab", "a2");
+if (!VALID_TABS.includes(activeTab)) {
+  activeTab = "a2";
+  store("srpski-active-tab", "a2");
+}
 
 const STORAGE_KEY = "srpski-progress-v1";
 const LAST_KEY = "srpski-last-v1";
@@ -11726,98 +11875,132 @@ function lessonCard(id, num) {
 }
 
 function renderHome() {
-  let total = 0, done = 0;
-  for (const id of ALL_IDS) { const s = lessonStats(id); total += s.total; done += s.done; }
-  const pct = total ? Math.round(done / total * 100) : 0;
+  // Общий прогресс
+  let totalAll = 0, doneAll = 0;
+  for (const id of ALL_IDS) { 
+    const s = lessonStats(id); 
+    totalAll += s.total; 
+    doneAll += s.done; 
+  }
+  const overallPct = totalAll ? Math.round(doneAll / totalAll * 100) : 0;
 
+  // Определение уроков активного таба
+  const tabMap = {
+    a2: { title: "A2 Экспресс", ids: LINE_A2_IDS, class: "l-a2" },
+    b1: { title: "B1 Каркас и падежи", ids: LINE_B1_IDS, class: "l-b1" },
+    b2: { title: "B2 Беглая речь", ids: LINE_B2_IDS, class: "l-b2" },
+    c1: { title: "C1 Мастерство", ids: LINE_C1_IDS, class: "l-c1" },
+    lex: { title: "Лексика и говор", ids: LINE_LEX_IDS, class: "l-lex" }
+  };
+  const currentTabInfo = tabMap[activeTab] || tabMap.a2;
+
+  // Прогресс именно внутри активной вкладки
+  let curTabDone = 0;
+  currentTabInfo.ids.forEach(id => {
+    const s = lessonStats(id);
+    if (s.total > 0 && s.done === s.total) curTabDone++;
+  });
+  const curTabTotal = currentTabInfo.ids.length;
+
+  // Поиск ближайшего незавершенного урока для быстрой кнопки "Наставити"
   const last = load(LAST_KEY, null);
-  const contId = last && LESSONS[last.id] ? last.id : ALL_IDS.find(id => lessonStats(id).done === 0) || ALL_IDS[0];
+  const contId = (last && LESSONS[last.id]) 
+    ? last.id 
+    : (currentTabInfo.ids.find(id => lessonStats(id).done < lessonStats(id).total) || currentTabInfo.ids[0] || ALL_IDS[0]);
 
-  const punches = ALL_IDS.map((id, i) => {
-    const st = lessonStats(id);
-    const p = st.total ? Math.round(st.done / st.total * 100) : 0;
-    return `<i class="punch${p === 100 ? " done" : ""}" style="--p:${p}%">${i + 1}</i>`;
-  }).join("");
+  // Расчет параметров кругового индикатора (SVG Ring)
+  const radius = 27;
+  const circumference = 2 * Math.PI * radius; // ~169.6
+  const strokeOffset = circumference - (overallPct / 100) * circumference;
 
-  const showA2 = activeTab === "all" || activeTab === "a2";
-  const showB1 = activeTab === "all" || activeTab === "b1";
-  const showB2 = activeTab === "all" || activeTab === "b2";
-  const showC1 = activeTab === "all" || activeTab === "c1";
-  const showVid = activeTab === "all" || activeTab === "vid";
+  // Хелпер мини-статуса на кнопке вкладки
+  const getTabSub = (ids) => {
+    let completed = 0;
+    ids.forEach(id => {
+      const s = lessonStats(id);
+      if (s.total > 0 && s.done === s.total) completed++;
+    });
+    if (completed === ids.length) return "✓";
+    return `${completed}/${ids.length}`;
+  };
 
   homeEl.innerHTML = `
-    <header class="home-top">
-      <div class="plate">
-        <span class="pct">${pct}%</span>
-        <small>Београд · Стари град</small>
-        <b>Српски</b>
-        <span>ulica srpskog jezika</span>
-      </div>
-      <div class="kilim"></div>
+    <!-- Новая компактная шапка -->
+    <header class="header-bar">
+      <div class="brand">Српски<span>.</span></div>
+      <div class="header-badge">${doneAll} / ${totalAll} решено</div>
     </header>
-    <section class="ticket">
-      <div class="ticket-head"><span>Карта · линија ${ALL_IDS.length}</span><span>№ ${String(done).padStart(4, "0")}</span></div>
-      <div class="ticket-row"><div class="ticket-num">${done}<small> / ${total}</small></div><span>решено верно</span></div>
-      <div class="punches">${punches}</div>
-    </section>
-    <button class="continue stop-sign" data-id="${contId}">
-      <span class="continue-play">${pad(ALL_IDS.indexOf(contId) + 1)}</span><span class="stop-ico">${ICONS[contId] || ""}</span>
-      <span class="stop-text"><small>${last && LESSONS[last.id] ? "Наставак вожње" : "Следеће стајалиште"}</small><b>${LESSONS[contId].title}</b></span>
-    </button>
 
-    <!-- Вкладки по уровням -->
+    <!-- Современная карточка прогресса с круговым баром -->
+    <section class="progress-card">
+      <div class="progress-ring-wrap">
+        <svg class="progress-ring" viewBox="0 0 68 68">
+          <circle class="bg" cx="34" cy="34" r="${radius}"></circle>
+          <circle class="bar-ring" cx="34" cy="34" r="${radius}" 
+            stroke-dasharray="${circumference}" 
+            stroke-dashoffset="${strokeOffset}">
+          </circle>
+        </svg>
+        <div class="progress-ring-text">${overallPct}%</div>
+      </div>
+      <div class="progress-info">
+        <h3>${currentTabInfo.title}</h3>
+        <p>Пройдено ${curTabDone} из ${curTabTotal} станций</p>
+        <button class="continue-chip" data-id="${contId}">
+          <span>Настави:</span> <b>${LESSONS[contId].title} →</b>
+        </button>
+      </div>
+    </section>
+
+    <!-- 5 компактных вкладок без скролла -->
     <nav class="level-tabs" aria-label="Нивои">
-      <button class="level-tab${activeTab === 'all' ? ' active' : ''}" data-tab="all">Све (${ALL_IDS.length})</button>
-      <button class="level-tab${activeTab === 'a2' ? ' active' : ''}" data-tab="a2">A2 Экспресс (${LINE_A2_IDS.length})</button>
-      <button class="level-tab${activeTab === 'b1' ? ' active' : ''}" data-tab="b1">B1 Падежи (${LINE_B1_IDS.length})</button>
-      <button class="level-tab${activeTab === 'b2' ? ' active' : ''}" data-tab="b2">B2 Говор (${LINE_B2_IDS.length})</button>
-      <button class="level-tab${activeTab === 'c1' ? ' active' : ''}" data-tab="c1">C1 Напредно (${LINE_C1_IDS.length})</button>
-      <button class="level-tab${activeTab === 'vid' ? ' active' : ''}" data-tab="vid">Видео (${LINE_VID_IDS.length})</button>
+      <button class="level-tab${activeTab === 'a2' ? ' active' : ''}" data-tab="a2">
+        <span class="tab-title">A2</span>
+        <span class="tab-sub">${getTabSub(LINE_A2_IDS)}</span>
+      </button>
+      <button class="level-tab${activeTab === 'b1' ? ' active' : ''}" data-tab="b1">
+        <span class="tab-title">B1</span>
+        <span class="tab-sub">${getTabSub(LINE_B1_IDS)}</span>
+      </button>
+      <button class="level-tab${activeTab === 'b2' ? ' active' : ''}" data-tab="b2">
+        <span class="tab-title">B2</span>
+        <span class="tab-sub">${getTabSub(LINE_B2_IDS)}</span>
+      </button>
+      <button class="level-tab${activeTab === 'c1' ? ' active' : ''}" data-tab="c1">
+        <span class="tab-title">C1</span>
+        <span class="tab-sub">${getTabSub(LINE_C1_IDS)}</span>
+      </button>
+      <button class="level-tab${activeTab === 'lex' ? ' active' : ''}" data-tab="lex">
+        <span class="tab-title">Лексика</span>
+        <span class="tab-sub">${getTabSub(LINE_LEX_IDS)}</span>
+      </button>
     </nav>
 
-    ${showA2 ? `
-      <h2 class="module-title l-a2">Линија 1: A2 Экспресс <span>${LINE_A2_IDS.length}</span></h2>
-      <ol class="route l-a2">${LINE_A2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
-    ` : ""}
+    <!-- Маршрут выбранного уровня -->
+    <ol class="route ${currentTabInfo.class}">
+      ${currentTabInfo.ids.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}
+    </ol>
 
-    ${showB1 ? `
-      <h2 class="module-title l-b1">Линија 2: B1 Каркас и падежи <span>${LINE_B1_IDS.length}</span></h2>
-      <ol class="route l-b1">${LINE_B1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
-    ` : ""}
+    <div class="home-foot">Ответы можно вводить кириллицей или латиницей.</div>
+  `;
 
-    ${showB2 ? `
-      <h2 class="module-title l-b2">Линија 3: B2 Беглая речь <span>${LINE_B2_IDS.length}</span></h2>
-      <ol class="route l-b2">${LINE_B2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
-    ` : ""}
+  // Обработчики открытия урока
+  homeEl.querySelectorAll(".route [data-id], .continue-chip[data-id]").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.dataset.id;
+      const sec = last && last.id === id ? last.section : null;
+      openLesson(id, sec);
+    });
+  });
 
-    ${showC1 ? `
-      <h2 class="module-title l-c1">Линија 4: C1 Мастерство <span>${LINE_C1_IDS.length}</span></h2>
-      <ol class="route l-c1">${LINE_C1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
-    ` : ""}
-
-    ${showVid ? `
-      <h2 class="module-title l-vid">Видео: Аудирање (Njuz Net) <span>${LINE_VID_IDS.length}</span></h2>
-      <ol class="route l-vid">${LINE_VID_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
-    ` : ""}
-
-    <h2 class="module-title az">Азбука <span>30 слова</span></h2>
-    ${azbukaHTML()}
-    <footer class="city">${SKYLINE}<div class="city-cap">Београд · Калемегдан · Победник · Свети Сава · Авала · Западна капија</div></footer>
-    <div class="home-foot">Ответы можно вводить кириллицей или латиницей.</div>`;
-
-  // Обработка перехода в урок
-  homeEl.querySelectorAll(".route [data-id], .continue[data-id]").forEach(el => el.addEventListener("click", () => {
-    const id = el.dataset.id;
-    const sec = last && last.id === id ? last.section : null;
-    openLesson(id, sec);
-  }));
-
-  // Обработка переключения вкладок
-  homeEl.querySelectorAll(".level-tab").forEach(tab => tab.addEventListener("click", () => {
-    activeTab = tab.dataset.tab;
-    store("srpski-active-tab", activeTab);
-    renderHome();
-  }));
+  // Обработчик переключения вкладок
+  homeEl.querySelectorAll(".level-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeTab = tab.dataset.tab;
+      store("srpski-active-tab", activeTab);
+      renderHome();
+    });
+  });
 }
 
 /* ================= LESSON ================= */
