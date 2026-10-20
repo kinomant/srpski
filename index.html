@@ -652,11 +652,37 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 .opts.cases .opt { justify-content: center; text-align: center; font-size: 15.5px; padding: 14px 8px; font-weight: 500; }
 .opts.cases .key { display: none; }
 
-/* practice route + legacy rule markup */
-.module-title.mid::before { background: #d49a00; }
-.route.mid::before { background: #d49a00; }
-.route.mid li::before { border-color: #d49a00; }
-.route.mid .lc-stop { color: #a87700; }
+/* ================= 4 ЛИНИИ МАРШРУТА ================= */
+/* Линия 1: A2 (зелёная) */
+.module-title.l-a2::before { background: var(--green); }
+.route.l-a2::before { background: var(--green); }
+.route.l-a2 li::before { border-color: var(--green); }
+.route.l-a2 .lc-stop { color: var(--green); }
+
+/* Линия 2: B1 (синяя) */
+.module-title.l-b1::before { background: var(--flag-blue); }
+.route.l-b1::before { background: var(--flag-blue); }
+.route.l-b1 li::before { border-color: var(--flag-blue); }
+.route.l-b1 .lc-stop { color: var(--flag-blue); }
+
+/* Линия 3: B2 (красная) */
+.module-title.l-b2::before { background: var(--flag-red); }
+.route.l-b2::before { background: var(--flag-red); }
+.route.l-b2 li::before { border-color: var(--flag-red); }
+.route.l-b2 .lc-stop { color: var(--flag-red); }
+
+/* Линия 4: C1 (фиолетовая) */
+.module-title.l-c1::before { background: #7b2cbf; }
+.route.l-c1::before { background: #7b2cbf; }
+.route.l-c1 li::before { border-color: #7b2cbf; }
+.route.l-c1 .lc-stop { color: #7b2cbf; }
+
+/* Линия Видео: YouTube (золотая) */
+.module-title.l-vid::before { background: var(--sign-yellow); }
+.route.l-vid::before { background: var(--sign-yellow); }
+.route.l-vid li::before { border-color: var(--sign-yellow); }
+.route.l-vid .lc-stop { color: #a87700; }
+
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .route.mid .lc-stop { color: var(--yellow); } }
 :root[data-theme="dark"] .route.mid .lc-stop { color: var(--yellow); }
 .punches { grid-template-columns: repeat(8, 1fr); }
@@ -11022,10 +11048,19 @@ const NEW_LESSONS = {
       "sr": "...зато што је рекла да Трамп је {{_}} форице.",
       "ans": "бацао",
       "ytId": "3lHLt4Ohb4E",
-      "start": 113,
+      "start": 115,
       "end": 123,
       "hint": "Форма глагола «бацати» мужского рода в прошедшем времени: «бацао форице»."
      },
+     {
+  "ru": "«И сейчас все думают: если бы она этого не написала...» Разговорный сленг.",
+  "sr": "И сад су сви у {{_}} да није то написала...",
+  "ans": "фазону",
+  "ytId": "3lHLt4Ohb4E",
+  "start": 122,
+  "end": 127,
+  "hint": "Существительное в локативе после «у»: «у фазону»."
+},
      {
       "ru": "04:04 — «Многие скажут, что это искусственный интеллект...»",
       "sr": "Многи ће рећи да {{_}} ово AI.",
@@ -11503,12 +11538,63 @@ Object.assign(ICONS, {
     <circle cx="20" cy="5" r="2" fill="${YEL}"/>`),
 });
 
-const BASE_ALL = Object.keys(LESSONS);
-const BASE_IDS = BASE_ALL.slice(0, PRACTICE_START);
-const PRACTICE_IDS = BASE_ALL.slice(PRACTICE_START);
-const NEW_IDS = Object.keys(NEW_LESSONS);
+// Объединяем базы уроков
 Object.assign(LESSONS, NEW_LESSONS);
-const ALL_IDS = [...BASE_ALL, ...NEW_IDS];
+
+// 4 методические линии (32 урока от базы к мастерству)
+const LINE_A2_IDS = [
+  "lokativ-akuzativ",
+  "proslo-vreme",
+  "glagolski-oblici",
+  "glagolski-vid",
+  "povratni-glagoli",
+  "obracanje"
+];
+
+const LINE_B1_IDS = [
+  "oj-zenski",
+  "klik-start",
+  "klitike-osnova",
+  "glagolsko-upravljanje",
+  "predlozi-padezi",
+  "pridevi-mnozina",
+  "lok-instr-mnozina",
+  "slaganje-pridjeva",
+  "velar-palatalizacija",
+  "mnozina-imenice",
+  "roditelni-mnozina",
+  "akuzativ-genitiv-mn"
+];
+
+const LINE_B2_IDS = [
+  "deca-slaganje",
+  "deca-padezi",
+  "slaganje",
+  "glagoli-lovushki",
+  "glagolsko-upravljanje-2",
+  "nego-a",
+  "futur-ako",
+  "klitike-zavisne",
+  "razgovorni",
+  "rusizmy"
+];
+
+const LINE_C1_IDS = [
+  "nestvarni-uslov",
+  "veznici",
+  "glagoli-osnove",
+  "predlozi"
+];
+
+// Видеоуроки (Njuz Net)
+const LINE_VID_IDS = [
+  "video-njuz-tramp",
+  "video-njuz-kamen",
+  "video-njuz-batinasi"
+];
+
+// Полный реестр всех остановок
+const ALL_IDS = [...LINE_A2_IDS, ...LINE_B1_IDS, ...LINE_B2_IDS, ...LINE_C1_IDS, ...LINE_VID_IDS];
 
 const STORAGE_KEY = "srpski-progress-v1";
 const LAST_KEY = "srpski-last-v1";
@@ -11603,8 +11689,8 @@ function renderHome() {
   const pct = total ? Math.round(done / total * 100) : 0;
 
   const last = load(LAST_KEY, null);
-  const contId = last && LESSONS[last.id] ? last.id : NEW_IDS.find(id => lessonStats(id).done === 0) || ALL_IDS[0];
-  const contLabel = last && LESSONS[last.id] ? "Продолжить" : "Начать новую тему";
+  // Находим первый не пройденный урок среди всех линий
+  const contId = last && LESSONS[last.id] ? last.id : ALL_IDS.find(id => lessonStats(id).done === 0) || ALL_IDS[0];
 
   const punches = ALL_IDS.map((id, i) => {
     const st = lessonStats(id);
@@ -11631,12 +11717,22 @@ function renderHome() {
       <span class="continue-play">${pad(ALL_IDS.indexOf(contId) + 1)}</span><span class="stop-ico">${ICONS[contId] || ""}</span>
       <span class="stop-text"><small>${last && LESSONS[last.id] ? "Наставак вожње" : "Следеће стајалиште"}</small><b>${LESSONS[contId].title}</b></span>
     </button>
-    <h2 class="module-title">Новые остановки <span>${NEW_IDS.length}</span></h2>
-    <ol class="route">${NEW_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
-    <h2 class="module-title mid">Практика <span>${PRACTICE_IDS.length}</span></h2>
-    <ol class="route mid">${PRACTICE_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
-    <h2 class="module-title old">Основа <span>${BASE_IDS.length}</span></h2>
-    <ol class="route old">${BASE_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+
+    <h2 class="module-title l-a2">Линија 1: A2 Экспресс <span>${LINE_A2_IDS.length}</span></h2>
+    <ol class="route l-a2">${LINE_A2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+
+    <h2 class="module-title l-b1">Линија 2: B1 Каркас и падежи <span>${LINE_B1_IDS.length}</span></h2>
+    <ol class="route l-b1">${LINE_B1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+
+    <h2 class="module-title l-b2">Линија 3: B2 Беглая речь <span>${LINE_B2_IDS.length}</span></h2>
+    <ol class="route l-b2">${LINE_B2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+
+    <h2 class="module-title l-c1">Линија 4: C1 Мастерство <span>${LINE_C1_IDS.length}</span></h2>
+    <ol class="route l-c1">${LINE_C1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+
+    <h2 class="module-title l-vid">Видео: Аудирање (Njuz Net) <span>${LINE_VID_IDS.length}</span></h2>
+    <ol class="route l-vid">${LINE_VID_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+
     <h2 class="module-title az">Азбука <span>30 слова</span></h2>
     ${azbukaHTML()}
     <footer class="city">${SKYLINE}<div class="city-cap">Београд · Калемегдан · Победник · Свети Сава · Авала · Западна капија</div></footer>
@@ -11700,7 +11796,7 @@ function startSection() {
   const pending = idxs.filter(i => arr[i] !== true);
   const solved = idxs.filter(i => arr[i] === true);
   
-  // Для видеоуроков (где shuffle: false) сохраняем строгий хронологический порядок 1 -> 2 -> 3 -> 4
+  // Если shuffle: false — сохраняем строгую последовательность вопросов
   if (sec.shuffle === false) {
     cur.order = pending.length ? [...pending, ...solved] : idxs;
   } else {
@@ -12012,7 +12108,7 @@ function check() {
     fullSentenceToSpeak = right;
   }
 
-  els.bar.innerHTML = `
+els.bar.innerHTML = `
     <div class="feedback ${ok ? "ok" : "bad"}">
       <div class="fb-title">${ok ? pick(PRAISE) : pick(OOPS)}<span class="fb-sub">${ok ? "верно" : "ошибка"}</span> ${speakButtonHTML(fullSentenceToSpeak)}</div>
       ${ok ? "" : `<div class="fb-ans">Правильно: <b lang="sr">${right}</b></div>`}
@@ -12023,7 +12119,6 @@ function check() {
   $("#tip").innerHTML = "";
   ex.querySelector(".tools").hidden = true;
 }
-
 
 function next() {
   if (cur.index < cur.order.length - 1) {
