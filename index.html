@@ -127,6 +127,44 @@
   border-color: var(--blue);
   animation: speak-pulse 0.8s infinite alternate;
 }
+
+/* ---------- Вкладки уровней (табы) ---------- */
+.level-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 18px -16px 14px;
+  padding: 4px 16px;
+}
+.level-tabs::-webkit-scrollbar { display: none; }
+.level-tab {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.level-tab:active { transform: scale(0.97); }
+.level-tab.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.level-tab[data-tab="a2"].active { background: var(--green); border-color: var(--green); color: #fff; }
+.level-tab[data-tab="b1"].active { background: var(--flag-blue); border-color: var(--flag-blue); color: #fff; }
+.level-tab[data-tab="b2"].active { background: var(--flag-red); border-color: var(--flag-red); color: #fff; }
+.level-tab[data-tab="c1"].active { background: #7b2cbf; border-color: #7b2cbf; color: #fff; }
+.level-tab[data-tab="vid"].active { background: var(--sign-yellow); border-color: #a87700; color: #1b1b1b; }
+
 @keyframes speak-pulse {
   from { transform: scale(1); }
   to { transform: scale(1.15); }
@@ -11540,6 +11578,10 @@ Object.assign(ICONS, {
 
 // Объединяем базы уроков
 Object.assign(LESSONS, NEW_LESSONS);
+const NEW_IDS = Object.keys(NEW_LESSONS); // <--- ВОТ ЭТО ИСПРАВЛЯЕТ БЕЛЫЙ ЭКРАН
+
+let activeTab = load("srpski-active-tab", "all");
+
 
 // 4 методические линии (32 урока от базы к мастерству)
 const LINE_A2_IDS = [
@@ -11689,7 +11731,6 @@ function renderHome() {
   const pct = total ? Math.round(done / total * 100) : 0;
 
   const last = load(LAST_KEY, null);
-  // Находим первый не пройденный урок среди всех линий
   const contId = last && LESSONS[last.id] ? last.id : ALL_IDS.find(id => lessonStats(id).done === 0) || ALL_IDS[0];
 
   const punches = ALL_IDS.map((id, i) => {
@@ -11697,6 +11738,12 @@ function renderHome() {
     const p = st.total ? Math.round(st.done / st.total * 100) : 0;
     return `<i class="punch${p === 100 ? " done" : ""}" style="--p:${p}%">${i + 1}</i>`;
   }).join("");
+
+  const showA2 = activeTab === "all" || activeTab === "a2";
+  const showB1 = activeTab === "all" || activeTab === "b1";
+  const showB2 = activeTab === "all" || activeTab === "b2";
+  const showC1 = activeTab === "all" || activeTab === "c1";
+  const showVid = activeTab === "all" || activeTab === "vid";
 
   homeEl.innerHTML = `
     <header class="home-top">
@@ -11718,30 +11765,58 @@ function renderHome() {
       <span class="stop-text"><small>${last && LESSONS[last.id] ? "Наставак вожње" : "Следеће стајалиште"}</small><b>${LESSONS[contId].title}</b></span>
     </button>
 
-    <h2 class="module-title l-a2">Линија 1: A2 Экспресс <span>${LINE_A2_IDS.length}</span></h2>
-    <ol class="route l-a2">${LINE_A2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    <!-- Вкладки по уровням -->
+    <nav class="level-tabs" aria-label="Нивои">
+      <button class="level-tab${activeTab === 'all' ? ' active' : ''}" data-tab="all">Све (${ALL_IDS.length})</button>
+      <button class="level-tab${activeTab === 'a2' ? ' active' : ''}" data-tab="a2">A2 Экспресс (${LINE_A2_IDS.length})</button>
+      <button class="level-tab${activeTab === 'b1' ? ' active' : ''}" data-tab="b1">B1 Падежи (${LINE_B1_IDS.length})</button>
+      <button class="level-tab${activeTab === 'b2' ? ' active' : ''}" data-tab="b2">B2 Говор (${LINE_B2_IDS.length})</button>
+      <button class="level-tab${activeTab === 'c1' ? ' active' : ''}" data-tab="c1">C1 Напредно (${LINE_C1_IDS.length})</button>
+      <button class="level-tab${activeTab === 'vid' ? ' active' : ''}" data-tab="vid">Видео (${LINE_VID_IDS.length})</button>
+    </nav>
 
-    <h2 class="module-title l-b1">Линија 2: B1 Каркас и падежи <span>${LINE_B1_IDS.length}</span></h2>
-    <ol class="route l-b1">${LINE_B1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ${showA2 ? `
+      <h2 class="module-title l-a2">Линија 1: A2 Экспресс <span>${LINE_A2_IDS.length}</span></h2>
+      <ol class="route l-a2">${LINE_A2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ` : ""}
 
-    <h2 class="module-title l-b2">Линија 3: B2 Беглая речь <span>${LINE_B2_IDS.length}</span></h2>
-    <ol class="route l-b2">${LINE_B2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ${showB1 ? `
+      <h2 class="module-title l-b1">Линија 2: B1 Каркас и падежи <span>${LINE_B1_IDS.length}</span></h2>
+      <ol class="route l-b1">${LINE_B1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ` : ""}
 
-    <h2 class="module-title l-c1">Линија 4: C1 Мастерство <span>${LINE_C1_IDS.length}</span></h2>
-    <ol class="route l-c1">${LINE_C1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ${showB2 ? `
+      <h2 class="module-title l-b2">Линија 3: B2 Беглая речь <span>${LINE_B2_IDS.length}</span></h2>
+      <ol class="route l-b2">${LINE_B2_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ` : ""}
 
-    <h2 class="module-title l-vid">Видео: Аудирање (Njuz Net) <span>${LINE_VID_IDS.length}</span></h2>
-    <ol class="route l-vid">${LINE_VID_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ${showC1 ? `
+      <h2 class="module-title l-c1">Линија 4: C1 Мастерство <span>${LINE_C1_IDS.length}</span></h2>
+      <ol class="route l-c1">${LINE_C1_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ` : ""}
+
+    ${showVid ? `
+      <h2 class="module-title l-vid">Видео: Аудирање (Njuz Net) <span>${LINE_VID_IDS.length}</span></h2>
+      <ol class="route l-vid">${LINE_VID_IDS.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}</ol>
+    ` : ""}
 
     <h2 class="module-title az">Азбука <span>30 слова</span></h2>
     ${azbukaHTML()}
     <footer class="city">${SKYLINE}<div class="city-cap">Београд · Калемегдан · Победник · Свети Сава · Авала · Западна капија</div></footer>
     <div class="home-foot">Ответы можно вводить кириллицей или латиницей.</div>`;
 
-  homeEl.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () => {
+  // Обработка перехода в урок
+  homeEl.querySelectorAll(".route [data-id], .continue[data-id]").forEach(el => el.addEventListener("click", () => {
     const id = el.dataset.id;
     const sec = last && last.id === id ? last.section : null;
     openLesson(id, sec);
+  }));
+
+  // Обработка переключения вкладок
+  homeEl.querySelectorAll(".level-tab").forEach(tab => tab.addEventListener("click", () => {
+    activeTab = tab.dataset.tab;
+    store("srpski-active-tab", activeTab);
+    renderHome();
   }));
 }
 
