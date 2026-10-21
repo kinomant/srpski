@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -308,11 +309,6 @@
 .route.l-lex li::before     { border-color: #d06015; }
 .route.l-lex .lc-stop       { color: #d06015; }
 
-
-@keyframes speak-pulse {
-  from { transform: scale(1); }
-  to { transform: scale(1.15); }
-}
 @keyframes speak-pulse {
   from { transform: scale(1); }
   to { transform: scale(1.12); }
@@ -370,46 +366,6 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 [hidden] { display: none !important; }
 
 /* ---------- Home ---------- */
-.home-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 14px; }
-.wordmark { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; }
-.wordmark i { font-style: normal; color: var(--red); }
-.top-pct { font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--ink-2); }
-
-.hero {
-  position: relative; overflow: hidden;
-  background: var(--blue); color: #fff;
-  border-radius: 22px; padding: 22px 20px 20px;
-}
-.hero-letters {
-  position: absolute; right: -6px; top: -18px;
-  font-family: var(--display); font-weight: 700; font-size: 92px; line-height: 1;
-  letter-spacing: -0.04em; color: rgba(255,255,255,0.12);
-  pointer-events: none; white-space: nowrap;
-}
-.hero-num { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1; position: relative; }
-.hero-num span { font-size: 20px; opacity: .6; font-weight: 500; }
-.hero-label { margin-top: 6px; font-size: 15px; opacity: .85; position: relative; }
-.hero .bar { margin-top: 18px; background: rgba(255,255,255,.22); }
-.hero .bar i { background: var(--yellow); }
-
-.bar { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: 99px; background: var(--green); transition: width .4s ease; }
-
-.continue {
-  margin-top: 12px; width: 100%;
-  display: flex; align-items: center; gap: 14px;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 14px 16px; text-align: left;
-}
-.continue:active { transform: scale(.99); }
-.continue-play {
-  flex: 0 0 40px; height: 40px; border-radius: 50%;
-  background: var(--ink); color: var(--bg);
-  display: grid; place-items: center;
-}
-.continue small { display: block; color: var(--ink-3); font-size: 13px; }
-.continue b { display: block; font-weight: 600; font-size: 16px; line-height: 1.3; }
-
 .module-title {
   display: flex; align-items: baseline; gap: 8px;
   font-family: var(--display); font-weight: 600; font-size: 19px;
@@ -675,78 +631,20 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 .kilim { height: 24px; background: var(--kilim) repeat-x left center / 36px 24px; border-radius: 4px; }
 .kilim.thin { height: 12px; background-size: 18px 12px; border-radius: 2px; }
 
-/* street plate */
-.home-top { display: block; padding: 16px 0 12px; }
-.plate {
-  position: relative; background: var(--flag-blue); color: #fff;
-  border-radius: 12px; padding: 12px 18px 14px;
-  box-shadow: inset 0 0 0 3px var(--flag-blue), inset 0 0 0 5px #fff, 0 6px 0 -2px rgba(0,0,0,.18);
-}
-.plate::before, .plate::after {
-  content: ""; position: absolute; top: 50%; width: 7px; height: 7px; margin-top: -4px;
-  border-radius: 50%; background: #c9ced8; box-shadow: inset -1px -1px 0 rgba(0,0,0,.35);
-}
-.plate::before { left: 10px; } .plate::after { right: 10px; }
-.plate small { display: block; text-align: center; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
-.plate b { display: block; text-align: center; font-family: var(--display); font-weight: 700; font-size: 38px; line-height: 1.05; letter-spacing: .01em; margin: 2px 0 2px; }
-.plate span { display: block; text-align: center; font-size: 13px; opacity: .85; letter-spacing: .04em; }
-.plate .pct { position: absolute; right: 26px; top: 10px; font-family: var(--display); font-size: 12px; font-weight: 600; opacity: .8; }
-.home-top .kilim { margin-top: 12px; }
-
-/* tram ticket */
-.ticket {
-  position: relative; margin-top: 14px;
-  background: var(--cream); color: #1b1b1b;
-  border-radius: 6px; padding: 14px 18px 16px;
-  -webkit-mask: radial-gradient(circle 9px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat,
-                radial-gradient(circle 9px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat;
-          mask: radial-gradient(circle 9px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat,
-                radial-gradient(circle 9px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat;
-  border-top: 6px solid var(--flag-red);
-}
-.ticket-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #6b6255; }
-.ticket-row { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 12px; }
-.ticket-num { font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; color: var(--flag-red); }
-.ticket-num small { font-size: 18px; color: #8d8374; font-weight: 500; }
-.ticket-row span { font-size: 14px; color: #4a443b; }
-.punches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; border-top: 1.5px dashed #bdb3a2; padding-top: 12px; }
-.punch {
-  position: relative; aspect-ratio: 1; border: 1.5px solid #bdb3a2; border-radius: 4px;
-  display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #8d8374;
-  background: linear-gradient(to top, rgba(193,39,45,.18) var(--p), transparent var(--p));
-}
-.punch.done { border-color: var(--flag-red); color: transparent; }
-.punch.done::after { content: ""; position: absolute; width: 58%; height: 58%; border-radius: 50%; background: var(--bg); box-shadow: inset 0 1px 2px rgba(0,0,0,.35); }
-.punch.legend { border: 0; background: none; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
-
-/* bus-stop sign */
-.continue.stop-sign {
-  background: var(--sign-yellow); border: 0; color: #1b1b1b;
-  border-radius: 14px; box-shadow: 0 4px 0 #b88900;
-}
-.continue.stop-sign:active { transform: translateY(3px); box-shadow: 0 1px 0 #b88900; }
-.stop-sign .continue-play { background: #1b1b1b; color: var(--sign-yellow); font-family: var(--display); font-weight: 700; font-size: 17px; }
-.stop-sign small { color: #5a4a12; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; font-weight: 600; }
-.stop-sign b { font-size: 17px; }
-
 /* route */
 .module-title { margin-top: 30px; }
 .module-title::before { content: ""; width: 18px; height: 18px; border-radius: 5px; background: var(--flag-red); align-self: center; flex: 0 0 auto; }
-.module-title.old::before { background: var(--flag-blue); }
 .route { position: relative; list-style: none; margin: 0; padding: 0 0 0 30px; display: grid; gap: 10px; }
 .route::before { content: ""; position: absolute; left: 9px; top: 18px; bottom: 18px; width: 4px; border-radius: 2px; background: var(--flag-red); }
-.route.old::before { background: var(--flag-blue); }
 .route li { position: relative; }
 .route li::before {
   content: ""; position: absolute; left: -28px; top: 22px; width: 18px; height: 18px; border-radius: 50%;
   background: var(--bg); border: 4px solid var(--flag-red); box-sizing: border-box;
 }
-.route.old li::before { border-color: var(--flag-blue); }
 .route li.done::before { background: var(--green); border-color: var(--green); }
 .route .lesson-card { grid-template-columns: 1fr; padding: 14px 16px; }
 .route .lc-num { display: none; }
 .lc-stop { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--flag-red); margin-bottom: 2px; }
-.route.old .lc-stop { color: var(--blue); }
 .badge-new { background: var(--sign-yellow); color: #1b1b1b; }
 
 /* lesson screen */
@@ -792,27 +690,6 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 .stop-ico { order: 3; width: 46px; height: 46px; flex: 0 0 46px; }
 .stop-ico svg { width: 46px; height: 46px; }
 
-.module-title.az::before { background: var(--sign-yellow); }
-.azbuka {
-  overflow: hidden; border-radius: 14px; background: var(--flag-blue); color: #fff;
-  -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-          mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-}
-.azbuka-track { display: flex; width: max-content; animation: marquee 40s linear infinite; }
-.azbuka span {
-  font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1;
-  width: 54px; height: 64px; display: grid; place-items: center;
-  border-right: 1px solid rgba(255,255,255,.14); opacity: .92;
-}
-.azbuka span.own { color: var(--sign-yellow); opacity: 1; }
-@keyframes marquee { to { transform: translateX(-50%); } }
-@media (prefers-reduced-motion: reduce) { .azbuka { overflow-x: auto; } .azbuka-track { animation: none; } }
-
-.city { margin: 34px -16px 0; color: var(--flag-blue); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .city { color: #2a4a86; } }
-:root[data-theme="dark"] .city { color: #2a4a86; }
-.skyline { display: block; width: 100%; height: auto; }
-.city-cap { background: var(--flag-blue); color: rgba(255,255,255,.75); font-size: 11px; letter-spacing: .08em; text-align: center; padding: 0 16px 10px; margin-top: -1px; }
 .home-foot { padding-top: 16px; }
 
 .tip {
@@ -859,11 +736,6 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 .route.l-c1 li::before { border-color: #7b2cbf; }
 .route.l-c1 .lc-stop { color: #7b2cbf; }
 
-/* Линия Видео: YouTube (золотая) */
-.module-title.l-vid::before { background: var(--sign-yellow); }
-.route.l-vid::before { background: var(--sign-yellow); }
-.route.l-vid li::before { border-color: var(--sign-yellow); }
-.route.l-vid .lc-stop { color: #a87700; }
 
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .route.mid .lc-stop { color: var(--yellow); } }
 :root[data-theme="dark"] .route.mid .lc-stop { color: var(--yellow); }
@@ -915,21 +787,21 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 </div>
 
 <script>
-/* ================= НАДЁЖНАЯ ОЗВУЧКА (GOOGLE TTS + SPEECHSYNTHESIS) ================= */
+/* ================= НАДЁЖНАЯ ОЗВУЧКА (БЕЗ «ЋИРИЛИЧНО» И ДЛЯ ВСЕХ УСТРОЙСТВ) ================= */
 let currentAudio = null;
-let srVoice = null;
 
-function loadVoices() {
-  if (!("speechSynthesis" in window)) return;
-  const voices = window.speechSynthesis.getVoices();
-  srVoice = voices.find(v => /^sr[-_]/i.test(v.lang)) ||
-            voices.find(v => /^hr[-_]/i.test(v.lang)) ||
-            voices.find(v => /^bs[-_]/i.test(v.lang)) || null;
-}
+// Карта транслитерации для системных голосов (чтобы хорватский TTS не объявлял «ћирилично»)
+const CYR_TO_LAT_TTS = {
+  "а":"a", "б":"b", "в":"v", "г":"g", "д":"d", "ђ":"đ", "е":"e", "ж":"ž", "з":"z", "и":"i",
+  "ј":"j", "к":"k", "л":"l", "љ":"lj", "м":"m", "н":"n", "њ":"nj", "о":"o", "п":"p", "р":"r",
+  "с":"s", "т":"t", "ћ":"ć", "у":"u", "ф":"f", "х":"h", "ц":"c", "ч":"č", "џ":"dž", "ш":"š",
+  "А":"A", "Б":"B", "В":"V", "Г":"G", "Д":"D", "Ђ":"Đ", "Е":"E", "Ж":"Ž", "З":"Z", "И":"I",
+  "Ј":"J", "К":"K", "Л":"L", "Љ":"Lj", "М":"M", "Н":"N", "Њ":"Nj", "О":"O", "П":"P", "Р":"R",
+  "С":"S", "Т":"T", "Ћ":"Ć", "У":"U", "Ф":"F", "Х":"H", "Ц":"C", "Ч":"Č", "Џ":"Dž", "Ш":"Š"
+};
 
-if ("speechSynthesis" in window) {
-  loadVoices();
-  window.speechSynthesis.onvoiceschanged = loadVoices;
+function toLatinForTTS(text) {
+  return String(text).replace(/[а-яА-ЯёЁђјљњћџЂЈЉЊЋЏ]/g, c => CYR_TO_LAT_TTS[c] || c);
 }
 
 function cleanTextForSpeech(text) {
@@ -944,11 +816,46 @@ function cleanTextForSpeech(text) {
     .trim();
 }
 
+function getSystemVoice() {
+  if (!("speechSynthesis" in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(v => /^sr[-_]/i.test(v.lang)) ||
+         voices.find(v => /^hr[-_]/i.test(v.lang)) ||
+         voices.find(v => /^bs[-_]/i.test(v.lang)) || null;
+}
+
+if ("speechSynthesis" in window) {
+  window.speechSynthesis.onvoiceschanged = () => getSystemVoice();
+}
+
+function speakWithSystem(clean, stopAnim) {
+  if (!("speechSynthesis" in window)) {
+    stopAnim();
+    return;
+  }
+  window.speechSynthesis.cancel();
+  
+  // Передаём латиницу: для хорватского/боснийского голоса звучит идентично, 
+  // но движок перестаёт говорить слово «ћирилично»
+  const latinText = toLatinForTTS(clean);
+  const u = new SpeechSynthesisUtterance(latinText);
+  const v = getSystemVoice();
+  if (v) {
+    u.voice = v;
+    u.lang = v.lang;
+  } else {
+    u.lang = "hr-HR";
+  }
+  u.rate = 0.92;
+  u.onend = stopAnim;
+  u.onerror = stopAnim;
+  window.speechSynthesis.speak(u);
+}
+
 function speak(text, btnEl = null) {
   const clean = cleanTextForSpeech(text);
   if (!clean) return;
 
-  // Останавливаем предыдущую озвучку
   if (currentAudio) {
     currentAudio.pause();
     currentAudio = null;
@@ -958,42 +865,32 @@ function speak(text, btnEl = null) {
   }
 
   if (btnEl) btnEl.classList.add("speaking");
-  const stopAnimation = () => { if (btnEl) btnEl.classList.remove("speaking"); };
+  const stopAnim = () => { if (btnEl) btnEl.classList.remove("speaking"); };
 
-  // 1. Приоритет: чистый сербский голос Google TTS (звучит идеально на любом ПК и телефоне)
+  // 1. Приоритет: чистый сербский голос Google TTS
+  // Благодаря <meta name="referrer" content="no-referrer"> он работает на телефонах и ПК
   const gTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=sr&client=tw-ob&q=${encodeURIComponent(clean)}`;
-  const audio = new Audio(gTtsUrl);
+  const audio = new Audio();
   currentAudio = audio;
+  audio.src = gTtsUrl;
 
-  audio.onended = stopAnimation;
-  audio.onerror = () => {
-    // 2. Фолбэк: если нет интернета, используем системный синтезатор
-    if ("speechSynthesis" in window) {
-      const u = new SpeechSynthesisUtterance(clean);
-      u.lang = "sr-RS";
-      if (srVoice) u.voice = srVoice;
-      u.rate = 0.92;
-      u.onend = stopAnimation;
-      u.onerror = stopAnimation;
-      window.speechSynthesis.speak(u);
-    } else {
-      stopAnimation();
-    }
+  audio.onended = () => {
+    stopAnim();
+    currentAudio = null;
   };
 
-  audio.play().catch(() => {
-    // Если браузер заблокировал прямой Audio.play, пробуем SpeechSynthesis
-    if ("speechSynthesis" in window) {
-      const u = new SpeechSynthesisUtterance(clean);
-      u.lang = "sr-RS";
-      if (srVoice) u.voice = srVoice;
-      u.onend = stopAnimation;
-      u.onerror = stopAnimation;
-      window.speechSynthesis.speak(u);
-    } else {
-      stopAnimation();
-    }
-  });
+  audio.onerror = () => {
+    // 2. Фолбэк на системный голос (при отсутствии интернета)
+    speakWithSystem(clean, stopAnim);
+  };
+
+  const playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(() => {
+      // Фолбэк, если политика браузера заблокировала Audio
+      speakWithSystem(clean, stopAnim);
+    });
+  }
 }
 
 const SPEAK_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
@@ -9024,13 +8921,9 @@ const LESSONS = {
     ]
    }
   },
-  "lat": "NEGO · A"
- }
-};
-const PRACTICE_START = 7;
-
-const NEW_LESSONS = {
- "futur-ako": {
+    "lat": "NEGO · A"
+ },
+  "futur-ako": {
   "title": "Будущее и «ако»",
   "lat": "FUTUR · AKO",
   "desc": "Показаћу или покажићу? Что ставить после «ако» и «кад», и как строить будущее от глаголов на -ћи.",
@@ -11195,6 +11088,9 @@ const NEW_LESSONS = {
    }
   }
  },
+};
+
+const NEW_LESSONS = {
 "video-njuz-tramp": {
   "title": "Njuz: Картонски Трамп",
   "emoji": "video",
@@ -11591,28 +11487,6 @@ const ICONS = {
     <path d="M15 22q5-3 10 0" stroke="${CREAM}" stroke-width="1.5"/>`),
 };
 
-const SKYLINE = `<svg class="skyline" viewBox="0 0 400 96" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
-  <g fill="currentColor">
-    <path d="M0 80V58h8v-5h7v5h8v-5h7v5h8v-5h7v5h8v-8h6v-6h10v6h6v8h8v22z"/>
-    <rect x="98" y="30" width="5" height="50"/>
-    <path d="M96 30h9l-1-3h-7z"/><circle cx="100.5" cy="20" r="3"/><path d="M99 23h3l1 4h-5z"/><path d="M98.5 21l-6-5 7 3z"/>
-    <path d="M130 80V52h8V40h30v12h8v28z"/>
-    <path d="M138 40q15-26 30 0z"/><rect x="151.5" y="6" width="3" height="10"/><rect x="148" y="9" width="10" height="2.5"/>
-    <path d="M128 52q6-10 12 0zM166 52q6-10 12 0z"/>
-    <path d="M232 80l3-40h4l3 40z"/><path d="M229 40h16l-2-5h-12z"/><rect x="235.5" y="22" width="3" height="13"/>
-    <path d="M296 80V22h14v58zM322 80V30h14v50z"/>
-    <path d="M308 26h16v8h-16z"/><circle cx="330" cy="19" r="7"/><rect x="327.5" y="24" width="5" height="7"/>
-    <path d="M0 80h400v16H0z"/>
-  </g>
-  <path d="M0 88q10-4 20 0t20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0 20 0" fill="none" stroke="var(--bg)" stroke-width="2"/>
-</svg>`;
-
-const AZBUKA = "А Б В Г Д Ђ Е Ж З И Ј К Л Љ М Н Њ О П Р С Т Ћ У Ф Х Ц Ч Џ Ш".split(" ");
-const AZBUKA_OWN = new Set(["Ђ","Ј","Љ","Њ","Ћ","Џ"]);
-const azbukaHTML = () => {
-  const row = AZBUKA.map(l => `<span${AZBUKA_OWN.has(l) ? ' class="own"' : ""}>${l}</span>`).join("");
-  return `<div class="azbuka" aria-label="Српска азбука"><div class="azbuka-track">${row}${row}</div></div>`;
-};
 
 const DZEZVA = `<svg viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="${K}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M10 15h13l3 15q-9.5 4-19 0z" fill="#b8733a"/><path d="M9 15h15"/><path d="M23.5 17 36 12"/><path d="M13 11q-2-3 0-6M17.5 11q-2-3 0-6" stroke="#8a92a0"/></svg>`;
 
@@ -11736,8 +11610,8 @@ const LINE_A2_IDS = [
 // Линия 2: B1 (Падежи и каркас)
 const LINE_B1_IDS = [
   "oj-zenski",
-  "klik-start",
   "klitike-osnova",
+  "klik-start",
   "glagolsko-upravljanje",
   "predlozi-padezi",
   "pridevi-mnozina",
@@ -11779,7 +11653,7 @@ const LINE_LEX_IDS = [
 // Полный реестр всех уроков (без видео)
 const ALL_IDS = [...LINE_A2_IDS, ...LINE_B1_IDS, ...LINE_B2_IDS, ...LINE_C1_IDS, ...LINE_LEX_IDS];
 
-// Защита от старого значения "all": если в памяти старая вкладка, сбрасываем на "a2"
+// Активная вкладка
 const VALID_TABS = ["a2", "b1", "b2", "c1", "lex"];
 let activeTab = load("srpski-active-tab", "a2");
 if (!VALID_TABS.includes(activeTab)) {
