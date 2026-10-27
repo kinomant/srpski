@@ -48,8 +48,6 @@ const ICONS = {
   "aorist-govor": svg(`<path d="M8 28V12a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4h-9l-5 4v-4H12a4 4 0 0 1-4-4z" fill="${CREAM}"/><path d="M22 6l-5 10h6l-3 9 9-11h-5l3-8z" fill="${RED}" stroke="none"/>`),
 };
 
-const TESTED = {'HOLLwYwVYGo', 'BW5ohat6-qk', 'EdhUIlST3F0', 'u8tTRq9eHbU', '4dKv2wT265Q'}; /// HOLLwYwVYGo - Софияб, BW5ohat6-qk - Вучич Карлеуша 4dKv2wT265Q - Кустурица EdhUIlST3F0 - Атомная бомба
-
 const LESSONS = {
  "klitike-osnova": {
   "title": "Порядок клитик: база",
