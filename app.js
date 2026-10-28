@@ -599,11 +599,7 @@ function renderDashboard() {
   $("#mod-btn-listen").addEventListener("click", renderListenMap);
   $("#mod-btn-words").addEventListener("click", openVocabModal);
   $("#mod-btn-quiz").addEventListener("click", openQuizMenu);   
-
-  ["read"].forEach(mod => {
-    $(`#mod-btn-${mod}`).addEventListener("click", () => alert("Овај модул је у припреми!"));
-  });
-    
+  $("#mod-btn-read").addEventListener("click", openReadCatalog);
 
 
   $("#btn-export")?.addEventListener("click", exportProgress);
@@ -1106,6 +1102,7 @@ function check() {
   const it = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].item 
            : (cur.isListen && cur.queue) ? cur.queue[cur.index] 
            : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item 
+           : (cur.isRead && cur.queue) ? cur.queue[cur.index] 
            : item();
   if (!it) return;
 
@@ -1113,6 +1110,7 @@ function check() {
   const fmt = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].format 
             : (cur.isListen && cur.queue) ? cur.queue[cur.index].format 
             : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item.format 
+            : (cur.isRead && cur.queue) ? cur.queue[cur.index].format 
             : section().format;
             
   const ex = els.exercise;
@@ -1166,10 +1164,10 @@ function check() {
     if (!ok) ex.querySelector(".build").insertAdjacentHTML("afterend", `<div class="answer-line">Верно: ${it.prefix || ""} <b>${right}</b> ${it.suffix || ""}</div>`);
   }
 
-  // Блокируем интерфейс (чтобы нельзя было кликать повторно)
+  // Блокируем интерфейс после ответа
   ex.classList.add("locked");
 
-  // ================= СОХРАНЕНИЕ ПРОГРЕССА =================
+  // ================= СОХРАНЕНИЕ ПРОГРЕССА (ПО РЕЖИМАМ) =================
   if (cur.isExam) {
     const q = cur.examQueue[cur.index];
     q.result = ok;
@@ -1193,19 +1191,22 @@ function check() {
     
   } else if (cur.isListen) {
     const q = cur.queue[cur.index];
-    q.result = ok; // Сохраняем для верхнего трека (индикаторов)
+    q.result = ok; 
     listenProgress[cur.id][cur.index] = ok;
     saveListenProgress();
     
   } else if (cur.isQuiz) {
     const q = cur.quizQueue[cur.index];
-    q.result = ok; // Сохраняем для верхнего трека (индикаторов)
+    q.result = ok; 
     
-    // В базу квизов сохраняем только если не решали раньше (чтобы не потерять старые баллы)
     if (ok || quizProgress[cur.id] !== true) {
       quizProgress[cur.id] = ok;
       store("srpski-quiz-v1", quizProgress);
     }
+  } else if (cur.isRead) {
+    // Сохранение ответа для режима "Читање"
+    const q = cur.queue[cur.index];
+    q.result = ok;
   } else {
     // Обычные уроки (Лекције)
     progress[cur.id][cur.section][realIndex()] = ok;
@@ -1215,14 +1216,25 @@ function check() {
   // ================= ОБНОВЛЕНИЕ ТРЕКА И ВЫВОД ФИДБЕКА =================
   cur.phase = "result";
   
+  // Обновляем индикаторы сверху в зависимости от режима
   if (cur.isExam) renderExamTrack();
   else if (cur.isListen) renderListenTrack();
   else if (cur.isQuiz) renderQuizTrack();
+  else if (cur.isRead) {
+    // Рендерим трек для чтения
+    els.track.innerHTML = cur.queue.map((q, i) => {
+      let c = (i === cur.index && cur.phase === "answer") ? "cur" 
+            : (q.result === true) ? "ok" 
+            : (q.result === false) ? "bad" : "";
+      return `<i class="${c}"></i>`;
+    }).join("");
+  }
   else { renderTrack(); renderSections(); }
 
   const why = it.why || it.hint || "";
   let fullSentenceToSpeak = it.sr ? it.sr.replace(/___|\{\{_\}\}/g, right) : right;
 
+  // Рисуем плашку фидбека внизу
   els.bar.innerHTML = `
     <div class="feedback ${ok ? "ok" : "bad"}">
       <div class="fb-title">${ok ? "Браво!" : "Опасно близу!"}<span class="fb-sub">${ok ? "тачно" : "нетачно"}</span> ${speakButtonHTML(fullSentenceToSpeak)}</div>
@@ -1240,25 +1252,25 @@ function next() {
   cur.phase = "answer";
   if (els.bar) els.bar.innerHTML = "";
   
-  // Определяем общее количество заданий в зависимости от режима
   const totalItems = cur.isExam ? cur.examQueue.length 
                    : cur.isListen ? cur.queue.length 
                    : cur.isQuiz ? cur.quizQueue.length 
+                   : cur.isRead ? cur.queue.length // <-- Добавлено для Чтения
                    : cur.order.length;
                    
   if (cur.index < totalItems - 1) {
     cur.index++;
-    // Запускаем рендер следующего вопроса нужного режима
     if (cur.isExam) renderExamQuestion();
     else if (cur.isListen) renderListenQuestion();
-    else if (cur.isQuiz) renderQuizQuestion(); 
+    else if (cur.isQuiz) renderQuizQuestion();
+    else if (cur.isRead) renderReadQuestion(); // <-- Добавлено для Чтения
     else render();
     window.scrollTo({ top: 0, behavior: "smooth" });
   } else {
-    // Конец сессии: показываем экран результатов
     if (cur.isExam) finishExam();
     else if (cur.isListen) finishListen();
-    else if (cur.isQuiz) finishQuiz(); 
+    else if (cur.isQuiz) finishQuiz();
+    else if (cur.isRead) finishRead(); // <-- Добавлено для Чтения
     else finish();
   }
 }
@@ -2288,6 +2300,192 @@ function handleVocabAnswer(cardId, remembered) {
       window.scrollTo(0, 0);
     });
   }
+}
+
+/* ================================================================= */
+/* ДВИЖОК РАЗДЕЛА "ЧИТАЊЕ" (Антологија српске књижевности) */
+/* ================================================================= */
+
+function getReadStats() {
+  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0 };
+  const totalTexts = Object.keys(READ_DB).length;
+  let readTexts = 0;
+  for (const id in READ_DB) {
+    if (readProgress[id] === true) readTexts++;
+  }
+  const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
+  return { pct, texts: readTexts };
+}
+
+function openReadCatalog() {
+  if (typeof READ_DB === "undefined" || Object.keys(READ_DB).length === 0) {
+    alert("Библиотека је тренутно празна.");
+    return;
+  }
+
+  let html = `
+    <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="icon-btn" id="btn-dash-back" aria-label="Назад">
+          <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2 2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink);">Читање</h2>
+      </div>
+      <button class="theme-toggle-btn" type="button" aria-label="Смени тему" style="margin-left: auto;">
+        ${curTheme === "dark" ? SUN_ICON : MOON_ICON}
+      </button>
+    </header>
+    <div style="padding-bottom: 24px;">
+  `;
+
+  for (const [id, data] of Object.entries(READ_DB)) {
+    const isDone = readProgress[id] === true;
+    
+    // Генерация красивой аватарки с инициалами автора на случай, если фото с Вики не загрузилось
+    const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
+
+    html += `
+      <button class="read-card" data-read="${id}">
+        <img class="read-avatar" src="${data.authorImg}" alt="${data.author}" onerror="this.src='${fallbackImg}'">
+        <div class="read-info">
+          <h3>${data.title}</h3>
+          <p>${data.author} · ⏱️ ${data.readTimeMins} мин (${data.wordCount} речи)</p>
+          <div><span class="read-meta-tag">${isDone ? '✅ Прочитано' : '📖 Текст за читанку'}</span></div>
+        </div>
+      </button>
+    `;
+  }
+
+  html += `</div>`;
+  homeEl.innerHTML = html;
+
+  $("#btn-dash-back").addEventListener("click", renderDashboard);
+  homeEl.querySelectorAll(".read-card").forEach(b => {
+    b.addEventListener("click", () => startReadSession(b.dataset.read));
+  });
+  window.scrollTo(0, 0);
+}
+
+function startReadSession(readId) {
+  const data = READ_DB[readId];
+  cur = { isRead: true, readId: readId, data: data, index: 0, phase: "reading" };
+
+  homeEl.hidden = true;
+  lessonEl.hidden = false;
+  $("#rule-btn").hidden = true;
+  $("#reset").hidden = true;
+
+  els.title.innerHTML = `<small><span class="level-pill" style="background:#7b2cbf;">ЧИТАЊЕ</span> · ${data.author}</small><b>${data.title}</b>`;
+  els.sections.innerHTML = "";
+  els.track.innerHTML = "";
+
+  renderReadTextView();
+  window.scrollTo(0, 0);
+}
+
+// 1. Экзаменационный шаг: Пользователь читает текст
+function renderReadTextView() {
+  cur.phase = "reading";
+  els.sections.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--ink-3); padding:4px 0;">Корак 1 од 2: Прочитајте текст пажљиво</div>`;
+  els.track.innerHTML = "";
+
+  const data = cur.data;
+  const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="reading-container">
+      <div class="reading-header">
+        <img class="reading-author-img" src="${data.authorImg}" alt="${data.author}" onerror="this.src='${fallbackImg}'">
+        <div class="reading-title">
+          <h2>${data.title}</h2>
+          <p>${data.author}</p>
+        </div>
+      </div>
+      <div class="reading-body" lang="sr">${data.text}</div>
+    </div>
+  `;
+
+  els.bar.innerHTML = `<button class="primary" id="btn-to-questions">Прочитао сам, пређи на питања →</button>`;
+  $("#btn-to-questions").addEventListener("click", () => {
+    cur.phase = "answer";
+    cur.queue = cur.data.questions;
+    cur.index = 0;
+    renderReadQuestion();
+  });
+}
+
+// 2. Шаг вопросов по тексту
+function renderReadQuestion() {
+  cur.phase = "answer";
+  cur.state = {};
+  
+  // Рендерим трек точек для вопросов
+  els.track.innerHTML = cur.queue.map((q, i) => {
+    let c = (i === cur.index && cur.phase === "answer") ? "cur" 
+          : (q.result === true) ? "ok" 
+          : (q.result === false) ? "bad" : "";
+    return `<i class="${c}"></i>`;
+  }).join("");
+
+  els.sections.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--ink-3); padding:4px 0;">Питање ${cur.index + 1} од ${cur.queue.length}</div>`;
+
+  const q = cur.queue[cur.index];
+  let html = "";
+  if (q.format === "choice") html = viewChoice(q);
+  else if (q.format === "fill") html = viewFill(q);
+
+  const metaHeader = `
+    <div class="card-meta">
+      <div class="card-breadcrumbs">
+        <span class="level-pill" style="background:#7b2cbf;">ПРОВЕРА</span>
+        <span class="crumb-lesson">${esc(cur.data.title)}</span>
+      </div>
+      <div class="card-counter">${cur.index + 1} / ${cur.queue.length}</div>
+    </div>`;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = metaHeader + html + `<div id="tip"></div>`;
+  
+  bindExercise(q.format, q);
+  els.exercise.querySelector(".tools")?.remove();
+  renderBar();
+}
+
+function finishRead() {
+  cur.phase = "done";
+  els.sections.innerHTML = "";
+  els.track.innerHTML = "";
+
+  const total = cur.queue.length;
+  const correct = cur.queue.filter(q => q.result === true).length;
+  const isPassed = correct >= Math.ceil(total * 0.7); // Порог: 70% правильных
+
+  if (isPassed) {
+    readProgress[cur.readId] = true;
+    store("srpski-read-v1", readProgress);
+  }
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="finish">
+      <div class="stolnjak"><b>${isPassed ? "Браво!" : "Покушајте поново!"}</b></div>
+      <div class="finish-num">${correct}<span> / ${total}</span></div>
+      <p style="font-size:16px; font-weight:600; color:var(--ink); margin: 6px 0 20px;">
+        ${isPassed ? "Успешно сте прочитали и савладали овај текст!" : "Нисте скупили довољно тачних одговора. Прочитајте текст пажљивије."}
+      </p>
+      <div class="row">
+        <button class="secondary" id="read-again">Прочитај поново</button>
+      </div>
+    </div>`;
+
+  $("#read-again").addEventListener("click", () => startReadSession(cur.readId));
+  
+  els.bar.innerHTML = `<button class="primary" id="read-to-home">Назад на списак текстова</button>`;
+  $("#read-to-home").addEventListener("click", () => {
+    cur.isRead = false;
+    openReadCatalog();
+  });
 }
 
 // Запуск приложения
