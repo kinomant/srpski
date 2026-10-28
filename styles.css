@@ -78,31 +78,7 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 .app { max-width: 560px; margin: 0 auto; padding: 0 16px; }
 [hidden] { display: none !important; }
 
-/* Шапка и Прогресс */
-.header-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 14px; }
-.brand { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: -0.02em; color: var(--ink); }
-.brand span { color: var(--flag-red); }
-.header-badge { font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 12px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
 
-.progress-card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 20px; padding: 16px 18px; display: grid; grid-template-columns: 68px 1fr; gap: 16px; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.03); }
-.progress-ring-wrap { position: relative; width: 68px; height: 68px; }
-.progress-ring { transform: rotate(-90deg); width: 68px; height: 68px; }
-.progress-ring circle { fill: none; stroke-width: 5.5; }
-.progress-ring .bg { stroke: var(--surface-2); }
-.progress-ring .bar-ring { stroke: var(--flag-red); stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
-.progress-ring-text { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
-.progress-info h3 { margin: 0; font-family: var(--display); font-size: 16px; font-weight: 700; color: var(--ink); }
-.progress-info p { margin: 2px 0 8px; font-size: 13px; color: var(--ink-2); }
-.continue-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer; border: 1px solid var(--line); transition: background 0.15s, transform 0.1s; }
-.continue-chip:active { transform: scale(0.97); }
-.continue-chip b { color: var(--flag-red); }
-
-/* Испитни центар */
-.exam-hub-card { background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%); border: 2px solid var(--line); border-radius: 20px; padding: 18px 20px; margin: 16px 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); }
-.eh-info h3 { margin: 0; font-family: var(--display); font-size: 17px; font-weight: 700; }
-.eh-info p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
-.eh-btn { height: 42px; padding: 0 18px; border-radius: 12px; background: var(--ink); color: var(--bg); font-family: var(--display); font-size: 13px; font-weight: 700; white-space: nowrap; flex-shrink: 0; transition: transform 0.1s, background 0.15s; }
-.eh-btn:active { transform: scale(0.96); }
 
 /* Табы */
 .level-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 18px 0 16px; }
@@ -411,3 +387,216 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
 .data-tools { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
 .data-btn { font-size: 12px; color: var(--ink-3); text-decoration: underline; cursor: pointer; }
 .data-btn:hover { color: var(--ink); }
+
+/* ========================================= */
+/* ДАШБОРД - 6 КАРТОЧЕК С КРУЖКАМИ */
+/* ========================================= */
+.modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 16px; padding-bottom: 24px; }
+.mod-card {
+  background: var(--surface);
+  border: 2px solid var(--surface-2);
+  border-radius: 20px;
+  padding: 22px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+}
+.mod-card:active { transform: scale(0.96); }
+
+/* Кружок-иконка прогресса */
+.mod-ring-wrap { position: relative; width: 72px; height: 72px; }
+.mod-ring { transform: rotate(-90deg); width: 72px; height: 72px; }
+.mod-ring circle { fill: none; stroke-width: 5.5; }
+.mod-ring .bg { stroke: var(--surface-2); }
+.mod-ring .bar { stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+
+.mod-ring-text { 
+  position: absolute; inset: 0; display: grid; place-items: center; 
+  font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--ink); 
+}
+
+/* Тексты в карточке */
+.mod-info { display: flex; flex-direction: column; gap: 4px; }
+.mod-title { font-family: var(--display); font-size: 16px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1; letter-spacing: -0.01em; }
+.mod-desc { font-size: 11.5px; color: var(--ink-3); line-height: 1.3; margin: 0; font-weight: 500; }
+
+/* Индивидуальные цвета карточек */
+.m-lex:active { border-color: var(--green); }
+.m-lex .bar { stroke: var(--green); }
+
+.m-listen:active { border-color: var(--blue); }
+.m-listen .bar { stroke: var(--blue); }
+
+.m-quiz:active { border-color: #d06015; }
+.m-quiz .bar { stroke: #d06015; }
+
+.m-exam:active { border-color: var(--red); }
+.m-exam .bar { stroke: var(--red); }
+.m-exam .mod-ring-text { font-size: 19px; color: var(--red); } /* Текст уровня (B1) крупнее */
+
+.m-read:active { border-color: #7b2cbf; }
+.m-read .bar { stroke: #7b2cbf; }
+
+.m-words:active { border-color: #0284c7; }
+.m-words .bar { stroke: #0284c7; }
+
+
+/* Экран карты лекций (Открывается при клике на Лекције) */
+.map-header { display: flex; align-items: center; gap: 12px; padding: 16px 0 10px; position: sticky; top: 0; background: var(--bg); z-index: 10; margin-bottom: 8px; }
+.map-header h2 { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+
+/* Шапка приложения и Логотип */
+.header-bar { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  padding: 16px 0 10px; 
+}
+.brand { 
+  font-family: var(--display); 
+  font-weight: 700; 
+  font-size: 24px; 
+  letter-spacing: -0.02em; 
+  color: var(--ink); 
+  margin: 0;
+}
+.brand span { 
+  color: var(--flag-red); 
+}
+
+/* Бейдж прогресса в шапке (на странице лекций) */
+.header-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.hb-bar {
+  width: 40px;
+  height: 6px;
+  background: var(--surface); /* Фон полоски */
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+.hb-bar i {
+  display: block;
+  height: 100%;
+  background: var(--green); /* Цвет заполнения */
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* ================= ЛИПКИЙ ВИДЕОПЛЕЕР (СЛУШАЊЕ) ================= */
+#sticky-video-box {
+  position: sticky;
+  top: 62px; /* Прилипает сразу под шапкой .lesson-top */
+  z-index: 10;
+  background: var(--bg);
+  margin: 0 -16px 10px;
+  padding: 0 16px 14px;
+  border-bottom: 1.5px solid var(--line);
+}
+#sticky-video-box .video-wrap {
+  margin-bottom: 0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+.listen-hint-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  border: 1.5px solid var(--blue);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12.5px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.listen-hint-btn:active { transform: scale(0.96); }
+
+/* ================= СЛУШАЊЕ (КАТАЛОГ ВИДЕО) ================= */
+.listen-category { margin-bottom: 24px; }
+.listen-category-title { 
+  font-family: var(--display); 
+  font-size: 18px; 
+  font-weight: 700; 
+  margin: 0 0 12px; 
+  color: var(--ink); 
+}
+/* Горизонтальный скролл (как в Netflix) */
+.listen-row { 
+  display: flex; 
+  gap: 14px; 
+  overflow-x: auto; 
+  padding-bottom: 12px; 
+  margin: 0 -16px; /* Растягиваем за края экрана */
+  padding: 0 16px 12px;
+  scroll-snap-type: x mandatory; 
+  scrollbar-width: none; 
+}
+.listen-row::-webkit-scrollbar { display: none; }
+
+.vid-card { 
+  flex: 0 0 240px; 
+  scroll-snap-align: start; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+  cursor: pointer; 
+  transition: transform 0.12s; 
+  text-align: left; 
+}
+.vid-card:active { transform: scale(0.97); }
+.vid-card.disabled { opacity: 0.45; pointer-events: none; filter: grayscale(1); }
+
+/* Обложка видео */
+.vid-thumb { 
+  position: relative; 
+  width: 100%; 
+  aspect-ratio: 16/9; 
+  background: var(--surface-2); 
+  border-radius: 16px; 
+  overflow: hidden; 
+  border: 1px solid var(--line); 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06); 
+}
+.vid-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.vid-overlay { 
+  position: absolute; inset: 0; background: rgba(8, 12, 20, 0.15); 
+  display: flex; align-items: center; justify-content: center; 
+}
+.vid-play { 
+  width: 48px; height: 48px; border-radius: 50%; 
+  background: rgba(255,255,255,0.85); 
+  display: grid; place-items: center; color: var(--ink); 
+  backdrop-filter: blur(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.vid-play svg { width: 22px; height: 22px; margin-left: 3px; fill: currentColor; }
+
+/* Бейджи поверх картинки (минуты и прогресс) */
+.vid-badges { position: absolute; bottom: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; }
+.vid-badge { 
+  background: rgba(8, 12, 20, 0.75); color: #fff; font-size: 11px; font-weight: 600; 
+  padding: 3px 8px; border-radius: 8px; backdrop-filter: blur(4px); letter-spacing: 0.03em; 
+}
+.vid-badge.done { background: var(--green); color: #fff; }
+
+.vid-info h4 { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--ink); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vid-info p { margin: 4px 0 0; font-size: 12px; color: var(--ink-3); }
