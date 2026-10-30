@@ -4,7 +4,7 @@ let currentAudio = null;
 const CYR_TO_LAT_TTS = {
   "а":"a", "б":"b", "в":"v", "г":"g", "д":"d", "ђ":"đ", "е":"e", "ж":"ž", "з":"z", "и":"i",
   "ј":"j", "к":"k", "л":"l", "љ":"lj", "м":"m", "н":"n", "њ":"nj", "о":"o", "п":"p", "р":"r",
-  "с":"s", "т":"t", "ћ":"ć", "у":"u", "ф":"f", "х":"h", "ц":"c", "ч":"č", "џ":"dž", "ш":"š",
+  "с":"с", "т":"t", "ћ":"ć", "у":"u", "ф":"f", "х":"h", "ц":"c", "ч":"č", "џ":"dž", "ш":"š",
   "А":"A", "Б":"B", "В":"V", "Г":"G", "Д":"D", "Ђ":"Đ", "Е":"E", "Ж":"Ž", "З":"Z", "И":"I",
   "Ј":"J", "К":"K", "Л":"L", "Љ":"Lj", "М":"M", "Н":"N", "Њ":"Nj", "О":"O", "П":"P", "Р":"R",
   "С":"S", "Т":"T", "Ћ":"Ć", "У":"U", "Ф":"F", "Х":"H", "Ц":"C", "Ч":"Č", "Џ":"Dž", "Ш":"Š"
@@ -55,7 +55,6 @@ function speak(text, btnEl = null) {
   const clean = cleanTextForSpeech(text);
   if (!clean) return;
 
-  // Очищаем предыдущие попытки воспроизведения
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.removeAttribute("src");
@@ -154,6 +153,42 @@ function setPlaybackRate(rate) {
   f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setPlaybackRate', args: [rate] }), '*');
 }
 
+/* ================= ИКОНКИ И ТЕМА (Объявляем в самом начале) ================= */
+const SUN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
+const MOON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+
+const MOD_ICONS = {
+  lex: `<svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z"></path><path d="M9 3v15M15 6v15"></path></svg>`,
+  listen: `<svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0118 0v6"></path><path d="M21 19a2 2 0 01-2 2h-1v-6h3v4zM3 19a2 2 0 002 2h1v-6H3v4z"></path></svg>`,
+  quiz: `<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>`,
+  exam: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 3v3M12 18v3M3 12h3M18 12h3"></path></svg>`,
+  read: `<svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"></path><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"></path></svg>`,
+  words: `<svg viewBox="0 0 24 24"><path d="M21 16.5l-9 4.5-9-4.5"></path><path d="M21 12l-9 4.5-9-4.5"></path><path d="M12 3l9 4.5-9 4.5-9-4.5z"></path></svg>`
+};
+
+let curTheme = load("srpski-theme", null);
+if (!curTheme) {
+  curTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyTheme(t) {
+  curTheme = t;
+  document.documentElement.setAttribute("data-theme", t);
+  store("srpski-theme", t);
+  const icon = t === "dark" ? SUN_ICON : MOON_ICON;
+  document.querySelectorAll(".theme-toggle-btn").forEach(b => b.innerHTML = icon);
+}
+applyTheme(curTheme);
+
+function toggleTheme() {
+  applyTheme(curTheme === "dark" ? "light" : "dark");
+}
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".theme-toggle-btn");
+  if (btn) toggleTheme();
+});
+
 /* ================= ХРАНИЛИЩЕ И СОСТОЯНИЕ ================= */
 const STORAGE_KEY = "srpski-progress-v1";
 const LAST_KEY = "srpski-last-v1";
@@ -176,10 +211,8 @@ for (const id in LESSONS) {
     if (!Array.isArray(arr)) {
       progress[id][sec] = new Array(len).fill(null);
     } else if (arr.length < len) {
-      // Добавились новые задания в конец — сохраняем старые и дописываем null
       progress[id][sec] = arr.concat(new Array(len - arr.length).fill(null));
     } else if (arr.length > len) {
-      // Задания удалили — аккуратно обрезаем хвост
       progress[id][sec] = arr.slice(0, len);
     }
   }
@@ -235,28 +268,22 @@ function firstUnfinished(id) {
   return secs.find(s => progress[id] && progress[id][s] && progress[id][s].some(x => x !== true)) || secs[0];
 }
 
-/* ================= 1. ВИРТУАЛЬНАЯ КЛАВИАТУРА ДЛЯ IPHONE / SAFARI ================= */
+/* ================= ВИРТУАЛЬНАЯ КЛАВИАТУРА ================= */
 const SR_LETTERS = ["ч", "ж", "ш", "ђ", "ћ", "џ", "ј", "љ", "њ"];
 let activeInput = null;
 let kbEl = null;
 
 function positionKeyboardForVisualViewport() {
   if (!kbEl || kbEl.hidden) return;
-  
-  // Узнаем актуальную высоту нижней панели с кнопкой "Проверить"
   const barEl = document.querySelector(".actionbar");
   const barH = barEl ? barEl.offsetHeight : 80;
 
   if (window.visualViewport) {
     const vv = window.visualViewport;
-    // Смещение снизу (высота системной клавиатуры iOS/Android)
     const bottomOffset = window.innerHeight - (vv.offsetTop + vv.height);
-    
-    // Если системная клавиатура телефона открыта (занимает больше 100px)
     if (bottomOffset > 100) {
       kbEl.style.bottom = `${bottomOffset + 8}px`;
     } else {
-      // Клавиатура закрыта (или открыто на десктопе): держим плашку строго НАД кнопкой "Проверить"
       kbEl.style.bottom = `calc(${barH}px + 12px + var(--safe-b))`;
     }
   } else {
@@ -265,7 +292,6 @@ function positionKeyboardForVisualViewport() {
 }
 
 let vvHandlerAttached = false;
-
 function setupVisualViewportListeners() {
   if (window.visualViewport && !vvHandlerAttached) {
     window.visualViewport.addEventListener("resize", positionKeyboardForVisualViewport);
@@ -284,7 +310,6 @@ function showVirtualKeyboard(inp) {
     kbEl.innerHTML = SR_LETTERS.map(ch => `<button class="sr-key" type="button" data-ch="${ch}">${ch}</button>`).join("");
     document.body.appendChild(kbEl);
 
-    // Предотвращаем потерю фокуса инпутом при тапе по клавише
     kbEl.addEventListener("pointerdown", e => {
       e.preventDefault();
       const k = e.target.closest(".sr-key");
@@ -313,34 +338,7 @@ function hideVirtualKeyboard() {
   activeInput = null;
 }
 
-/* ================= 2. ТЕМА ================= */
-const SUN_ICON = `<svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 0 0 0-1.41.996.996 0 0 0 0 1.41l1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>`;
-const MOON_ICON = `<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>`;
-
-let curTheme = load("srpski-theme", null);
-if (!curTheme) {
-  curTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function applyTheme(t) {
-  curTheme = t;
-  document.documentElement.setAttribute("data-theme", t);
-  store("srpski-theme", t);
-  const icon = t === "dark" ? SUN_ICON : MOON_ICON;
-  document.querySelectorAll(".theme-toggle-btn").forEach(b => b.innerHTML = icon);
-}
-applyTheme(curTheme);
-
-function toggleTheme() {
-  applyTheme(curTheme === "dark" ? "light" : "dark");
-}
-
-document.addEventListener("click", e => {
-  const btn = e.target.closest(".theme-toggle-btn");
-  if (btn) toggleTheme();
-});
-
-/* ================= 3. ГЛАВНЫЙ ЭКРАН (HOME) ================= */
+/* ================= ГЛАВНЫЙ ЭКРАН (HOME / DASHBOARD) ================= */
 const VALID_TABS = ["a2", "b1", "b2", "c1", "lex"];
 let activeTab = load("srpski-active-tab", "a2");
 if (!VALID_TABS.includes(activeTab)) { activeTab = "a2"; store("srpski-active-tab", "a2"); }
@@ -371,16 +369,6 @@ function lessonCard(id, num) {
   </button>`;
 }
 
-const MOD_ICONS = {
-  lex: `<svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z"></path><path d="M9 3v15M15 6v15"></path></svg>`,
-  listen: `<svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0118 0v6"></path><path d="M21 19a2 2 0 01-2 2h-1v-6h3v4zM3 19a2 2 0 002 2h1v-6H3v4z"></path></svg>`,
-  quiz: `<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>`,
-  exam: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 3v3M12 18v3M3 12h3M18 12h3"></path></svg>`,
-  read: `<svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"></path><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"></path></svg>`,
-  words: `<svg viewBox="0 0 24 24"><path d="M21 16.5l-9 4.5-9-4.5"></path><path d="M21 12l-9 4.5-9-4.5"></path><path d="M12 3l9 4.5-9 4.5-9-4.5z"></path></svg>`
-};
-
-
 /* ================= ХРАНИЛИЩА ПРОГРЕССА ДЛЯ НОВЫХ МОДУЛЕЙ ================= */
 const listenProgress = load("srpski-listen-v1", {}); 
 const quizProgress   = load("srpski-quiz-v1", {});   
@@ -390,7 +378,6 @@ const vocabProgress  = load("srpski-vocab-v1", {});
 let examStats = load("srpski-exam-stats-v1", { totalAnswers: 0, correctAnswers: 0 });
 function saveExamStats() { store("srpski-exam-stats-v1", examStats); }
 
-// БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ (сработает, только если listen.js подключен)
 if (typeof LISTEN_DB !== "undefined") {
   for (const id in LISTEN_DB) {
     const qCount = LISTEN_DB[id].questions ? LISTEN_DB[id].questions.length : 0;
@@ -404,7 +391,6 @@ if (typeof LISTEN_DB !== "undefined") {
   }
 }
 const saveListenProgress = () => store("srpski-listen-v1", listenProgress);
-
 
 /* ================= ФУНКЦИИ РАСЧЕТА ПРОГРЕССА ================= */
 
@@ -435,13 +421,14 @@ function getQuizStats() {
 
 function getReadStats() {
   if (typeof READ_DB === "undefined") return { pct: 0, texts: 0 };
-  const totalTexts = Object.keys(READ_DB).length;
+  const keys = Object.keys(READ_DB);
+  const totalTexts = keys.length;
   let readTexts = 0;
-  for (const [id, data] of Object.entries(READ_DB)) {
+  for (const id of keys) {
     if (readProgress[id] === true) readTexts++;
   }
   const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
-  return { pct: pct, texts: readTexts };
+  return { pct, texts: readTexts, total: totalTexts };
 }
 
 function getVocabPct() { return 0; }
@@ -452,8 +439,7 @@ function getExamWinRate() {
 }
 
 function getUserLevelInfo() {
-  const THRESHOLD = 0.8; // 80% заданий уровня пройдено верно
-  
+  const THRESHOLD = 0.8; 
   const levels = [
     { name: "A2", ids: LINE_A2_IDS },
     { name: "B1", ids: LINE_B1_IDS },
@@ -473,14 +459,10 @@ function getUserLevelInfo() {
       d += s.done;
     }
     const pct = t > 0 ? d / t : 0;
-    
     currentLevel = lvl;
     currentPct = Math.round(pct * 100);
-    
-    // Если уровень не пройден на 80%, останавливаемся на нем (это наш текущий уровень)
     if (pct < THRESHOLD) break; 
   }
-  
   return { name: currentLevel.name, pct: currentPct }; 
 }
 
@@ -501,7 +483,6 @@ function renderDashboard() {
   const wordsPct = getVocabPct();
   const levelInfo = getUserLevelInfo(); 
 
-  // Функция для рисования карточки с кружком
   const r = 32; 
   const circ = 2 * Math.PI * r; 
 
@@ -510,7 +491,6 @@ function renderDashboard() {
     return `
       <button class="mod-card ${cls}" id="${id}">
         <div class="mod-ring-wrap">
-          <!-- Увеличили viewBox и координаты центра (cx, cy) до 36 -->
           <svg class="mod-ring" viewBox="0 0 72 72">
             <circle class="bg" cx="36" cy="36" r="${r}"></circle>
             <circle class="bar" cx="36" cy="36" r="${r}" 
@@ -527,8 +507,8 @@ function renderDashboard() {
       </button>
     `;
   };
+
   homeEl.innerHTML = `
-    <!-- Новая шапка: Заголовок в стиле страницы лекций -->
     <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 8px;">
       <h2 style="margin: 0; font-family: var(--display); font-size: 24px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;">
         Српски<span style="color: var(--flag-red);">.</span>
@@ -538,62 +518,42 @@ function renderDashboard() {
       </button>
     </header>
 
-    <!-- Красивый, стильный баннер уровня (БЕЗ скучного текста с процентами) -->
     <div style="display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1.5px solid var(--line); border-radius: 20px; padding: 18px 20px; margin-bottom: 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
       <div>
         <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-bottom: 4px;">Ваш тренутни ниво</div>
         <div style="font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em;">Српски језик</div>
       </div>
-      
-      <!-- Значок уровня с обводкой в цвет уровня -->
       <div style="display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 16px; border: 2.5px solid ${levelInfo.color}; background: var(--surface-2);">
         <b style="font-family: var(--display); font-size: 22px; color: ${levelInfo.color}; line-height: 1;">${levelInfo.name}</b>
       </div>
     </div>
 
-    <!-- Сетка карточек -->
     <div class="modules-grid">
-      <!-- ЛЕКЦИИ -->
-      ${buildCard('mod-btn-lex', 'Лекције', 'Основе и граматика', lexPct, 'm-lex', 
-        `<span style="font-size:16px">${lexPct}%</span>`
-      )}
-      <!-- СЛУШАЊЕ -->
-      ${buildCard('mod-btn-listen', 'Слушање', 'Живи говор и подкасти', listenStats.pct, 'm-listen', 
-        `<span style="font-size:16px">${listenStats.doneMins}</span>
-         <span style="font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px;">мин</span>`
-      )}
-      <!-- КВИЗЫ -->
-      ${buildCard('mod-btn-quiz', 'Квизови', 'Култура, спорт, друштво', quizStats.pct, 'm-quiz', 
-        `<span style="font-size:15px">${quizStats.points}</span>
-         <span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">бодова</span>`
-      )}
-      <!-- ЭКЗАМЕН -->
-      ${buildCard('mod-btn-exam', 'Испит', 'Срез знања и грешке', levelInfo.pct, 'm-exam', 
-        `<span style="font-size:20px; color:var(--red);">${levelInfo.name}</span>`
-      )}
-      <!-- СЛОВАРЬ -->
-      ${buildCard('mod-btn-words', 'Картице', 'Памћење речи', wordsPct, 'm-words', 
-        `<span style="font-size:15px">0</span>
-         <span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">речи</span>`
-      )}
-      <!-- ЧТЕНИЕ -->
-      ${buildCard('mod-btn-read', 'Читање', 'Текстови и превод', readStats.pct, 'm-read', 
-        `<span style="font-size:16px">${readStats.texts}</span>
-         <span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">текстова</span>`
-      )}
+      ${buildCard('mod-btn-lex', 'Лекције', 'Основе и граматика', lexPct, 'm-lex', `<span style="font-size:16px">${lexPct}%</span>`)}
+      ${buildCard('mod-btn-listen', 'Слушање', 'Живи говор и подкасти', listenStats.pct, 'm-listen', `<span style="font-size:16px">${listenStats.doneMins}</span><span style="font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px;">мин</span>`)}
+      ${buildCard('mod-btn-quiz', 'Квизови', 'Култура, спорт, друштво', quizStats.pct, 'm-quiz', `<span style="font-size:15px">${quizStats.points}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">бодова</span>`)}
+      ${buildCard('mod-btn-exam', 'Испит', 'Срез знања и грешке', levelInfo.pct, 'm-exam', `<span style="font-size:20px; color:var(--red);">${levelInfo.name}</span>`)}
+      ${buildCard('mod-btn-words', 'Картице', 'Памћење речи', wordsPct, 'm-words', `<span style="font-size:15px">0</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">речи</span>`)}
+      ${buildCard('mod-btn-read', 'Читање', 'Текстови и превод', readStats.pct, 'm-read', `<span style="font-size:16px">${readStats.texts}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">текстова</span>`)}
     </div>
 
+    <!-- ФУТЕР ГЛАВНОЙ СТРАНИЦЫ С КНОПКОЙ АДМИНКИ -->
     <div class="home-foot">
       <div>Одговори се могу уносити ћирилицом или латиницом.</div>
-      <div class="data-tools">
+      <div class="data-tools" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
         <button class="data-btn" id="btn-export" type="button">Експорт</button>
         <button class="data-btn" id="btn-import" type="button">Импорт</button>
+        
+        <button class="data-btn" id="btn-admin-reports" type="button" style="color: var(--blue); font-weight: 600; ${getReports().length > 0 ? '' : 'display: none;'};" onclick="openAdminReportsModal()">
+          Пријављене грешке (${getReports().length})
+        </button>
+
         <button class="data-btn" id="btn-full-reset" type="button" style="color: var(--red);">Ресетуј све</button>
       </div>
     </div>
   `;
 
-  // Привязка событий
+// Привязка событий главной страницы
   $("#mod-btn-lex").addEventListener("click", renderLessonsMap);
   $("#mod-btn-exam").addEventListener("click", openExamModal);
   $("#mod-btn-listen").addEventListener("click", renderListenMap);
@@ -601,10 +561,20 @@ function renderDashboard() {
   $("#mod-btn-quiz").addEventListener("click", openQuizMenu);   
   $("#mod-btn-read").addEventListener("click", openReadCatalog);
 
-
   $("#btn-export")?.addEventListener("click", exportProgress);
   $("#btn-import")?.addEventListener("click", importProgress);
   $("#btn-full-reset")?.addEventListener("click", fullResetProgress);
+  
+  // --- ПРИВЯЗКА АДМИНКИ РЕПОРТОВ И СЧЕТЧИКА ---
+  const adminBtn = $("#btn-admin-reports");
+  if (adminBtn) {
+    adminBtn.addEventListener("click", openAdminReportsModal);
+  }
+  
+  // Принудительно обновляем счетчик прямо сейчас!
+  setTimeout(() => {
+    updateAdminReportsCounter();
+  }, 50);
 }
 
 function renderLessonsMap() {
@@ -635,7 +605,6 @@ function renderLessonsMap() {
   };
 
   homeEl.innerHTML = `
-    <!-- Липкая шапка с кнопкой Назад, прогрессом и сменой темы -->
     <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 12px;">
         <button class="icon-btn" id="btn-dash-back" aria-label="Назад">
@@ -669,10 +638,8 @@ function renderLessonsMap() {
     </ol>
   `;
 
-  // Кнопка возврата в Дашборд
   $("#btn-dash-back").addEventListener("click", renderDashboard);
 
-  // Переключение табов
   homeEl.querySelectorAll(".level-tab").forEach(tab => {
     tab.addEventListener("click", () => {
       activeTab = tab.dataset.tab;
@@ -681,7 +648,6 @@ function renderLessonsMap() {
     });
   });
 
-  // Открытие урока
   homeEl.querySelectorAll(".route [data-id]").forEach(el => {
     el.addEventListener("click", () => {
       const id = el.dataset.id;
@@ -737,24 +703,25 @@ function openLesson(id, section) {
 function goHome() {
   const isListen = cur.isListen;
   const isExam = cur.isExam;
-  const isVocab = cur.isVocab; // Добавили
+  const isVocab = cur.isVocab;
+  const isRead = cur.isRead;
   
   cur.isExam = false;
   cur.isListen = false;
-  cur.isVocab = false; // Добавили
+  cur.isVocab = false;
+  cur.isRead = false;
   
   const svb = $("#sticky-video-box");
   if (svb) { svb.innerHTML = ""; svb.hidden = true; }
 
   $("#rule-btn").hidden = false;
   $("#reset").hidden = false;
-  lessonEl.hidden = false; // вопсрос, но лучше оставлять как было
   lessonEl.hidden = true;
   homeEl.hidden = false;
   closeRule();
   
-  if (isListen) renderListenMap();
-  else if (isExam || isVocab) renderDashboard(); // Возвращаем на дашборд
+  if (isListen || isRead) renderListenMap();
+  else if (isExam || isVocab) renderDashboard();
   else renderLessonsMap();
   
   window.scrollTo(0, 0);
@@ -880,7 +847,7 @@ function viewFill(it) {
 function viewFindError(it) {
   cur.state.clicked = null;
   const sentence = it.words.join(" ");
-  let h = videoHeaderHTML(it); // <-- ДОБАВИТЬ ЭТУ СТРОКУ
+  let h = videoHeaderHTML(it);
   h += (it.ru ? `<p class="ex-ru">${it.ru}</p>` : "") + 
        `<p class="ex-hint">Нажми на слово с ошибкой. ${speakButtonHTML(sentence)}</p><div class="words" lang="sr">`;
   it.words.forEach((w, i) => {
@@ -930,15 +897,18 @@ function render() {
   const stepTotal = cur.order.length;
 
   const metaHeader = `
-    <div class="card-meta">
-      <div class="card-breadcrumbs">
-        <span class="level-pill ${lvl.cls}">${lvl.name}</span>
-        <span class="crumb-lesson">${esc(l.title)}</span>
-        <span class="crumb-sep">/</span>
-        <span class="crumb-section">${esc(cur.section)}</span>
-      </div>
-      <div class="card-counter">${stepCurrent} / ${stepTotal}</div>
-    </div>`;
+      <div class="card-meta">
+        <div class="card-breadcrumbs">
+          <span class="level-pill ${lvl.cls}">${lvl.name}</span>
+          <span class="crumb-lesson">${esc(l.title)}</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-section">${esc(cur.section)}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${reportButtonHTML()}
+          <div class="card-counter">${stepCurrent} / ${stepTotal}</div>
+        </div>
+      </div>`;
 
   els.exercise.className = "card";
   els.exercise.innerHTML = metaHeader + intro + html + `
@@ -949,6 +919,9 @@ function render() {
     <div id="tip"></div>`;
 
   bindExercise(fmt, it);
+  $("#btn-report-issue")?.addEventListener("click", () => {
+    openReportModal(); 
+  });
   els.exercise.querySelector('[data-tool="hint"]')?.addEventListener("click", showHint);
   els.exercise.querySelector('[data-tool="answer"]')?.addEventListener("click", showAnswer);
   renderBar();
@@ -999,26 +972,20 @@ function bindExercise(fmt, it) {
     renderBar();
   }));
   ex.querySelectorAll(".blank").forEach(inp => {
-    // Автоматический расчёт ширины при первом рендере
     inp.style.width = Math.max(7, inp.value.length + 2) + "ch";
-
-    inp.addEventListener("focus", () => {
-      showVirtualKeyboard(inp);
-    });
-
+    inp.addEventListener("focus", () => showVirtualKeyboard(inp));
     inp.addEventListener("blur", () => {
-      // Небольшая задержка, чтобы успел сработать pointerdown по кнопкам клавиатуры
       setTimeout(() => {
         if (document.activeElement !== inp && !kbEl?.contains(document.activeElement)) {
           hideVirtualKeyboard();
         }
       }, 120);
     });
-  inp.addEventListener("input", () => {
-    inp.style.width = Math.max(7, inp.value.length + 2) + "ch";
-    renderBar();
+    inp.addEventListener("input", () => {
+      inp.style.width = Math.max(7, inp.value.length + 2) + "ch";
+      renderBar();
+    });
   });
-});
   ex.querySelectorAll(".word[data-i]").forEach(w => w.addEventListener("click", () => {
     ex.querySelectorAll(".word").forEach(x => x.classList.remove("sel"));
     w.classList.add("sel");
@@ -1029,7 +996,6 @@ function bindExercise(fmt, it) {
     cur.state.placed.push(+c.dataset.ci);
     c.classList.add("used");
     drawSlot();
-  
   }));
 
   const replayBtn = ex.querySelector("#vid-replay");
@@ -1068,6 +1034,7 @@ function hasAnswer() {
   const fmt = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].format 
             : (cur.isListen && cur.queue) ? cur.queue[cur.index].format 
             : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item.format
+            : (cur.isRead && cur.queue) ? cur.queue[cur.index].format
             : section()?.format;
   if (["choice","choice-live","case-ident","case-only","video-choice"].includes(fmt)) return !!cur.state.selected;
   if (fmt === "find-error") return cur.state.clicked != null;
@@ -1088,17 +1055,15 @@ function renderBar() {
 }
 
 const EXAM_ERRORS_KEY = "srpski-exam-errors-v1";
-let examErrors = load(EXAM_ERRORS_KEY, {}); // формат: { "lessonId:secName:idx": true }
+let examErrors = load(EXAM_ERRORS_KEY, {});
 
 function saveExamErrors() {
   store(EXAM_ERRORS_KEY, examErrors);
 }
 
 function check() {
-  // Проверяем, дал ли пользователь ответ
   if (!hasAnswer()) return;
 
-  // 1. Берем правильный вопрос в зависимости от текущего режима
   const it = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].item 
            : (cur.isListen && cur.queue) ? cur.queue[cur.index] 
            : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item 
@@ -1106,7 +1071,6 @@ function check() {
            : item();
   if (!it) return;
 
-  // 2. Определяем формат вопроса
   const fmt = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].format 
             : (cur.isListen && cur.queue) ? cur.queue[cur.index].format 
             : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item.format 
@@ -1116,7 +1080,6 @@ function check() {
   const ex = els.exercise;
   let ok = false, user = "", right = "";
 
-  // ================= ЛОГИКА ПРОВЕРКИ =================
   if (["choice","choice-live","case-ident","case-only","video-choice"].includes(fmt)) {
     user = cur.state.selected; right = it.ans; ok = user === right;
     ex.querySelectorAll(".opt").forEach(o => {
@@ -1164,10 +1127,8 @@ function check() {
     if (!ok) ex.querySelector(".build").insertAdjacentHTML("afterend", `<div class="answer-line">Верно: ${it.prefix || ""} <b>${right}</b> ${it.suffix || ""}</div>`);
   }
 
-  // Блокируем интерфейс после ответа
   ex.classList.add("locked");
 
-  // ================= СОХРАНЕНИЕ ПРОГРЕССА (ПО РЕЖИМАМ) =================
   if (cur.isExam) {
     const q = cur.examQueue[cur.index];
     q.result = ok;
@@ -1188,53 +1149,43 @@ function check() {
       progress[q.lessonId][q.secName][q.itemIdx] = true;
       saveProgress();
     }
-    
   } else if (cur.isListen) {
     const q = cur.queue[cur.index];
     q.result = ok; 
     listenProgress[cur.id][cur.index] = ok;
     saveListenProgress();
-    
   } else if (cur.isQuiz) {
     const q = cur.quizQueue[cur.index];
     q.result = ok; 
-    
     if (ok || quizProgress[cur.id] !== true) {
       quizProgress[cur.id] = ok;
       store("srpski-quiz-v1", quizProgress);
     }
   } else if (cur.isRead) {
-    // Сохранение ответа для режима "Читање"
     const q = cur.queue[cur.index];
     q.result = ok;
   } else {
-    // Обычные уроки (Лекције)
     progress[cur.id][cur.section][realIndex()] = ok;
     saveProgress();
   }
 
-  // ================= ОБНОВЛЕНИЕ ТРЕКА И ВЫВОД ФИДБЕКА =================
   cur.phase = "result";
   
-  // Обновляем индикаторы сверху в зависимости от режима
   if (cur.isExam) renderExamTrack();
   else if (cur.isListen) renderListenTrack();
   else if (cur.isQuiz) renderQuizTrack();
   else if (cur.isRead) {
-    // Рендерим трек для чтения
     els.track.innerHTML = cur.queue.map((q, i) => {
       let c = (i === cur.index && cur.phase === "answer") ? "cur" 
             : (q.result === true) ? "ok" 
             : (q.result === false) ? "bad" : "";
       return `<i class="${c}"></i>`;
     }).join("");
-  }
-  else { renderTrack(); renderSections(); }
+  } else { renderTrack(); renderSections(); }
 
   const why = it.why || it.hint || "";
   let fullSentenceToSpeak = it.sr ? it.sr.replace(/___|\{\{_\}\}/g, right) : right;
 
-  // Рисуем плашку фидбека внизу
   els.bar.innerHTML = `
     <div class="feedback ${ok ? "ok" : "bad"}">
       <div class="fb-title">${ok ? "Браво!" : "Опасно близу!"}<span class="fb-sub">${ok ? "тачно" : "нетачно"}</span> ${speakButtonHTML(fullSentenceToSpeak)}</div>
@@ -1255,7 +1206,7 @@ function next() {
   const totalItems = cur.isExam ? cur.examQueue.length 
                    : cur.isListen ? cur.queue.length 
                    : cur.isQuiz ? cur.quizQueue.length 
-                   : cur.isRead ? cur.queue.length // <-- Добавлено для Чтения
+                   : cur.isRead ? cur.queue.length 
                    : cur.order.length;
                    
   if (cur.index < totalItems - 1) {
@@ -1263,14 +1214,14 @@ function next() {
     if (cur.isExam) renderExamQuestion();
     else if (cur.isListen) renderListenQuestion();
     else if (cur.isQuiz) renderQuizQuestion();
-    else if (cur.isRead) renderReadQuestion(); // <-- Добавлено для Чтения
+    else if (cur.isRead) renderReadQuestion();
     else render();
     window.scrollTo({ top: 0, behavior: "smooth" });
   } else {
     if (cur.isExam) finishExam();
     else if (cur.isListen) finishListen();
     else if (cur.isQuiz) finishQuiz();
-    else if (cur.isRead) finishRead(); // <-- Добавлено для Чтения
+    else if (cur.isRead) finishRead();
     else finish();
   }
 }
@@ -1351,7 +1302,6 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !els.sheet.hidden) { closeRule(); return; }
   if (e.key !== "Enter") return;
 
-  // Ищем доступную кнопку по приоритету фазы урока
   const btn = $("#next") 
            || $("#check") 
            || $("#nextsec") 
@@ -1378,7 +1328,6 @@ document.addEventListener("click", e => {
 /* ================================================================= */
 
 function renderListenMap() {
-  // 1. Создаем словарь для объединения мелких тегов в 4 крупные категории
   const categoryMap = {
     "Друштво": "Друштво и живот", "Село": "Друштво и живот", "Услуге": "Друштво и живот", 
     "Урбанизам": "Друштво и живот", "Пољопривреда": "Друштво и живот", "Град": "Друштво и живот", 
@@ -1393,15 +1342,12 @@ function renderListenMap() {
     "Наука": "Наука и технологије", "Архитектура": "Наука и технологије", "ИТ": "Наука и технологије"
   };
 
-  // 2. Раскидываем базу по новым 4 категориям
   const categories = {};
   for (const [id, data] of Object.entries(LISTEN_DB)) {
-    // Разделяем "Историја: Атомска бомба" на тег и название
     const parts = data.title.split(": ");
     const originalTag = parts.length > 1 ? parts[0] : "Остало";
     const name = parts.length > 1 ? parts[1] : data.title;
     
-    // Ищем, к какой из 4 главных групп относится видео
     const broadCat = categoryMap[originalTag] || "Остало";
     
     if (!categories[broadCat]) categories[broadCat] = [];
@@ -1409,7 +1355,6 @@ function renderListenMap() {
   }
 
   let html = `
-    <!-- Липкая шапка -->
     <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 16px;">
       <div style="display: flex; align-items: center; gap: 12px;">
         <button class="icon-btn" id="btn-dash-back" aria-label="Назад">
@@ -1425,7 +1370,6 @@ function renderListenMap() {
     <div style="padding-bottom: 24px;">
   `;
 
-  // 3. Задаем жесткий порядок вывода этих 4 категорий на экран
   const ROW_ORDER = [
     "Друштво и живот", 
     "Култура и медији", 
@@ -1434,7 +1378,6 @@ function renderListenMap() {
     "Остало"
   ];
 
-  // 4. Рендерим категории в виде горизонтальных рядов
   for (const cat of ROW_ORDER) {
     if (!categories[cat] || categories[cat].length === 0) continue;
     
@@ -1463,7 +1406,6 @@ function renderListenMap() {
           </div>
           <div class="vid-info">
             <h4>${v.name}</h4>
-            <!-- Здесь мы выводим оригинальный узкий тег (например: Хумор, Архитектура) -->
             ${disabled ? `<p>${v.originalTag} · У припреми...</p>` : `<p>${v.originalTag} · ${qCount} питања</p>`}
           </div>
         </button>
@@ -1475,7 +1417,6 @@ function renderListenMap() {
   html += `</div>`;
   homeEl.innerHTML = html;
   
-  // Привязка событий
   $("#btn-dash-back").addEventListener("click", renderDashboard);
   
   homeEl.querySelectorAll(".vid-card:not(.disabled)").forEach(b => {
@@ -1491,23 +1432,19 @@ function startListenSession(videoId) {
   cur = { isListen: true, id: videoId, state: {}, phase: "answer" };
   cur.queue = LISTEN_DB[videoId].questions;
   
-  // НАХОДИМ ПЕРВЫЙ ВОПРОС БЕЗ ОТВЕТА (чтобы продолжить с того же места)
   const arr = listenProgress[videoId];
   const firstNull = arr.indexOf(null);
-  
-  // Если все вопросы уже как-то отвечены (нет null), начинаем с 0
   cur.index = firstNull !== -1 ? firstNull : 0; 
 
   homeEl.hidden = true;
   lessonEl.hidden = false;
   $("#rule-btn").hidden = true;
-  $("#reset").hidden = false; // Показываем кнопку сброса в подвале!
+  $("#reset").hidden = false;
 
   els.title.innerHTML = `<small><span class="level-pill" style="background:var(--blue);">СЛУШАЊЕ</span> · ${LISTEN_DB[videoId].durationMins} мин</small><b>${LISTEN_DB[videoId].title}</b>`;
 
   renderListenTrack();
 
-  // Рендерим липкий плеер
   const svb = $("#sticky-video-box");
   svb.hidden = false;
   svb.innerHTML = `
@@ -1579,7 +1516,6 @@ function finishListen() {
   svb.innerHTML = "";
   svb.hidden = true;
 
-  // Берем результаты из массива!
   const arr = listenProgress[cur.id];
   const total = cur.queue.length;
   const correct = arr.filter(x => x === true).length;
@@ -1599,7 +1535,6 @@ function finishListen() {
     </div>`;
 
   $("#listen-again").addEventListener("click", () => {
-    // При повторе очищаем прогресс видео
     listenProgress[cur.id] = new Array(total).fill(null);
     saveListenProgress();
     startListenSession(cur.id);
@@ -1655,17 +1590,15 @@ function openQuizMenu() {
   let selectedTheme = "Све теме";
   let selectedCount = 12;
 
-  // Выбор темы
   modal.querySelectorAll("[data-qtheme]").forEach(btn => {
     btn.addEventListener("click", () => {
       modal.querySelectorAll("[data-qtheme]").forEach(b => b.classList.remove("active", "selected-theme"));
       btn.classList.add("active");
-      if(btn.classList.contains("cfg-sub-btn")) btn.classList.add("selected-theme"); // Подсветка мелких кнопок
+      if(btn.classList.contains("cfg-sub-btn")) btn.classList.add("selected-theme");
       selectedTheme = btn.dataset.qtheme;
     });
   });
 
-  // Выбор количества
   modal.querySelectorAll(".cfg-count-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       modal.querySelectorAll(".cfg-count-btn").forEach(b => b.classList.remove("active"));
@@ -1674,7 +1607,7 @@ function openQuizMenu() {
     });
   });
 
-  $("#modal-close").addEventListener("click", () => modal.remove());
+  $("#modal-close", modal).addEventListener("click", () => modal.remove());
   
   $("#btn-start-quiz").addEventListener("click", () => {
     modal.remove();
@@ -1692,15 +1625,12 @@ function startQuizSession(theme, count) {
     alert("Тренутно нема питања у овој категорији."); return;
   }
 
-  // АЛГОРИТМ БЕЗ ПОВТОРЕНИЙ: Отделяем нерешенные (null или false) от решенных (true)
   const unsolved = shuffle(pool.filter(id => quizProgress[id] !== true));
   const solved = shuffle(pool.filter(id => quizProgress[id] === true));
 
   let finalQueue = [];
-  // Берем в первую очередь те, что человек еще не решил правильно
   finalQueue.push(...unsolved.slice(0, count));
   
-  // Если нерешенных не хватило (база закончилась), добиваем старыми для тренировки
   if (finalQueue.length < count) {
     finalQueue.push(...solved.slice(0, count - finalQueue.length));
   }
@@ -1735,7 +1665,7 @@ function renderQuizQuestion() {
   
   const qData = cur.quizQueue[cur.index];
   const it = qData.item;
-  cur.id = qData.id; // Передаем ID для сохранения в check()
+  cur.id = qData.id;
 
   els.sections.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--ink-3); padding:4px 0;">Питање ${cur.index + 1} од ${cur.quizQueue.length}</div>`;
 
@@ -1793,6 +1723,264 @@ function finishQuiz() {
     homeEl.hidden = false;
     renderDashboard();
     window.scrollTo(0, 0);
+  });
+}
+
+
+/* ================================================================= */
+/* ДВИЖОК РАЗДЕЛА "ЧИТАЊЕ" (Антологија српске књижевности) */
+/* ================================================================= */
+
+function getReadStats() {
+  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0 };
+  const totalTexts = Object.keys(READ_DB).length;
+  let readTexts = 0;
+  for (const id in READ_DB) {
+    if (readProgress[id] === true) readTexts++;
+  }
+  const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
+  return { pct, texts: readTexts };
+}
+
+function openReadCatalog() {
+  if (typeof READ_DB === "undefined" || Object.keys(READ_DB).length === 0) {
+    alert("Библиотека је тренутно празна.");
+    return;
+  }
+
+  const keys = Object.keys(READ_DB);
+  const totalTexts = keys.length;
+  
+  // Считаем прочитанные тексты
+  let readTexts = 0;
+  keys.forEach(id => {
+    if (readProgress[id] === true) readTexts++;
+  });
+  const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
+
+  let html = `
+    <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="icon-btn" id="btn-dash-back" aria-label="Назад">
+          <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2 2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink);">Читање</h2>
+      </div>
+      <button class="theme-toggle-btn" type="button" aria-label="Смени тему" style="margin-left: auto;">
+        ${curTheme === "dark" ? SUN_ICON : MOON_ICON}
+      </button>
+    </header>
+
+    <div style="padding-bottom: 24px;">
+      <!-- Дашборд прогресса -->
+      <div class="read-progress-dashboard" style="background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 16px 20px; margin-bottom: 20px;">
+        <div class="read-progress-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--ink);">
+          <span>Прогрес читања: ${readTexts} од ${totalTexts} текстова</span>
+          <span>${pct}%</span>
+        </div>
+        <div class="read-progress-bar-bg" style="background: var(--surface-2); border-radius: 8px; height: 10px; overflow: hidden; width: 100%;">
+          <div class="read-progress-bar-fill" style="background: #7b2cbf; height: 100%; width: ${pct}%; border-radius: 8px; transition: width 0.4s ease;"></div>
+        </div>
+      </div>
+
+      <!-- Сетка карточек -->
+      <div class="read-cards-grid">
+  `;
+
+  keys.forEach(id => {
+    const data = READ_DB[id];
+    const isDone = readProgress[id] === true;
+    const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
+
+    html += `
+      <div class="read-card" data-read="${id}">
+        <div class="read-card-header">
+          <img class="read-card-author-img" src="${data.authorImg}" alt="${data.author}" onerror="this.src='${fallbackImg}'">
+          <div class="read-card-meta">
+            <span class="read-card-category">${data.category}</span>
+            <span class="read-card-author">${data.author}</span>
+          </div>
+        </div>
+        <div class="read-card-body">
+          <div class="read-card-title">${data.title}</div>
+          <div class="read-card-info">
+            <span>⏱️ ~${data.readTimeMins} мин</span>
+            <span>📝 ${data.wordCount} речи</span>
+          </div>
+        </div>
+        <div class="read-card-footer">
+          <span class="read-status-badge ${isDone ? 'completed' : 'pending'}">
+            ${isDone ? '✅ Прочитано' : '📖 Непрочитано'}
+          </span>
+          <span style="color: #7b2cbf; font-weight: 600; font-size: 14px;">Читај →</span>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div></div>`;
+  homeEl.innerHTML = html;
+
+  $("#btn-dash-back").addEventListener("click", renderDashboard);
+  homeEl.querySelectorAll(".read-card").forEach(b => {
+    b.addEventListener("click", () => startReadSession(b.dataset.read));
+  });
+  window.scrollTo(0, 0);
+}
+
+function startReadSession(readId) {
+  const data = READ_DB[readId];
+  cur = { isRead: true, readId: readId, data: data, index: 0, phase: "reading" };
+
+  homeEl.hidden = true;
+  lessonEl.hidden = false;
+  $("#rule-btn").hidden = true;
+  $("#reset").hidden = true;
+
+  els.title.innerHTML = `<small><span class="level-pill" style="background:#7b2cbf;">ЧИТАЊЕ</span> · ${data.author}</small><b>${data.title}</b>`;
+  els.sections.innerHTML = "";
+  els.track.innerHTML = "";
+
+  renderReadTextView();
+  window.scrollTo(0, 0);
+}
+
+let currentReadFontSize = 18; // Стандартный размер шрифта для чтения
+
+function renderReadTextView() {
+  cur.phase = "reading";
+  els.sections.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--ink-3); padding:4px 0;">Корак 1 од 2: Прочитајте текст пажљиво</div>`;
+  els.track.innerHTML = "";
+
+  const data = cur.data;
+  const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
+
+  // Превращаем текст в красивые абзацы, разделенные переносами строк
+  const formattedParagraphs = data.text
+    .split('\n')
+    .map(p => p.trim())
+    .filter(p => p.length > 0)
+    .map(p => `<p style="margin-bottom: 1.5em; text-align: justify;">${p}</p>`)
+    .join('');
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="reader-container" style="max-width: 100%;">
+      <!-- Тулбар: Кнопка назад + зум шрифта -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 20px;">
+        <button onclick="openReadCatalog()" style="background: none; border: none; color: #7b2cbf; font-weight: 600; cursor: pointer; padding: 0;">← Назад на списак</button>
+        
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: var(--ink-3);">Величина слова:</span>
+          <button onclick="changeReadFontSize(-2)" style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; width: 30px; height: 30px; font-weight: bold; cursor: pointer; color: var(--ink);">A-</button>
+          <button onclick="changeReadFontSize(2)" style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; width: 30px; height: 30px; font-weight: bold; cursor: pointer; color: var(--ink);">A+</button>
+        </div>
+      </div>
+
+      <div class="reading-header" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+        <img class="reading-author-img" src="${data.authorImg}" alt="${data.author}" onerror="this.src='${fallbackImg}'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line);">
+        <div class="reading-title">
+          <h2 style="font-size: 20px; font-weight: 700; color: var(--ink); margin: 0 0 4px 0;">${data.title}</h2>
+          <p style="font-size: 14px; color: var(--ink-2); margin: 0;">${data.author}</p>
+        </div>
+      </div>
+
+      <!-- Блок текста с динамическим размером шрифта -->
+      <div id="reader-text-content" class="reading-body" lang="sr" style="font-size: ${currentReadFontSize}px; line-height: 1.8; color: var(--ink);">
+        ${formattedParagraphs}
+      </div>
+    </div>
+  `;
+
+  els.bar.innerHTML = `<button class="primary" id="btn-to-questions" style="background: #7b2cbf; color: white;">Прочитао сам, пређи на питања →</button>`;
+  $("#btn-to-questions").addEventListener("click", () => {
+    cur.phase = "answer";
+    cur.queue = cur.data.questions;
+    cur.index = 0;
+    renderReadQuestion();
+  });
+}
+
+// Функция изменения размера шрифта текста в режиме чтения
+function changeReadFontSize(delta) {
+  currentReadFontSize += delta;
+  if (currentReadFontSize < 14) currentReadFontSize = 14;
+  if (currentReadFontSize > 26) currentReadFontSize = 26;
+
+  const contentBlock = document.getElementById("reader-text-content");
+  if (contentBlock) {
+    contentBlock.style.fontSize = currentReadFontSize + "px";
+  }
+}
+
+function renderReadQuestion() {
+  cur.phase = "answer";
+  cur.state = {};
+  
+  els.track.innerHTML = cur.queue.map((q, i) => {
+    let c = (i === cur.index && cur.phase === "answer") ? "cur" 
+          : (q.result === true) ? "ok" 
+          : (q.result === false) ? "bad" : "";
+    return `<i class="${c}"></i>`;
+  }).join("");
+
+  els.sections.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--ink-3); padding:4px 0;">Питање ${cur.index + 1} од ${cur.queue.length}</div>`;
+
+  const q = cur.queue[cur.index];
+  let html = "";
+  if (q.format === "choice") html = viewChoice(q);
+  else if (q.format === "fill") html = viewFill(q);
+
+  const metaHeader = `
+    <div class="card-meta">
+      <div class="card-breadcrumbs">
+        <span class="level-pill" style="background:#7b2cbf;">ПРОВЕРА</span>
+        <span class="crumb-lesson">${esc(cur.data.title)}</span>
+      </div>
+      <div class="card-counter">${cur.index + 1} / ${cur.queue.length}</div>
+    </div>`;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = metaHeader + html + `<div id="tip"></div>`;
+  
+  bindExercise(q.format, q);
+  els.exercise.querySelector(".tools")?.remove();
+  renderBar();
+}
+
+function finishRead() {
+  cur.phase = "done";
+  els.sections.innerHTML = "";
+  els.track.innerHTML = "";
+
+  const total = cur.queue.length;
+  const correct = cur.queue.filter(q => q.result === true).length;
+  const isPassed = correct >= Math.ceil(total * 0.7);
+
+  if (isPassed) {
+    readProgress[cur.readId] = true;
+    store("srpski-read-v1", readProgress);
+  }
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="finish">
+      <div class="stolnjak"><b>${isPassed ? "Браво!" : "Покушајте поново!"}</b></div>
+      <div class="finish-num">${correct}<span> / ${total}</span></div>
+      <p style="font-size:16px; font-weight:600; color:var(--ink); margin: 6px 0 20px;">
+        ${isPassed ? "Успешно сте прочитали и савладали овај текст!" : "Нисте скупили довољно тачних одговора. Прочитајте текст пажљивије."}
+      </p>
+      <div class="row">
+        <button class="secondary" id="read-again">Прочитај поново</button>
+      </div>
+    </div>`;
+
+  $("#read-again").addEventListener("click", () => startReadSession(cur.readId));
+  
+  els.bar.innerHTML = `<button class="primary" id="read-to-home">Назад на списак текстова</button>`;
+  $("#read-to-home").addEventListener("click", () => {
+    cur.isRead = false;
+    openReadCatalog();
   });
 }
 
@@ -2075,7 +2263,7 @@ function openExamModal() {
     });
   });
 
-  $("#modal-close").addEventListener("click", () => modal.remove());
+  $("#modal-close", modal).addEventListener("click", () => modal.remove());
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
   $("#btn-start-exam-now").addEventListener("click", () => {
     modal.remove();
@@ -2139,35 +2327,23 @@ function fullResetProgress() {
   }
 }
 
-/* ================================================================= */
-/* ДВИЖОК РАЗДЕЛА "КАРТИЦЕ" (Flashcards & SRS) */
-/* ================================================================= */
+/* ================= ДВИЖОК РАЗДЕЛА "КАРТИЦЕ" И "ЧИТАЊЕ" ================= */
 
 const vocabLevels = load("srpski-vocab-levels-v1", {});
 
 function getVocabStats() {
   if (typeof VOCAB_DB === "undefined" || VOCAB_DB.length === 0) return { pct: 0, learned: 0, total: 0 };
-  
   let total = VOCAB_DB.length;
-  let scoreSum = 0; // Сумма набранных уровней по всем словам
-  let maxPossibleScore = total * 4; // Если бы каждое слово было на уровне 4
+  let scoreSum = 0; 
+  let maxPossibleScore = total * 4; 
 
   for (const card of VOCAB_DB) {
     const lvl = vocabLevels[card.id] || 0;
     scoreSum += lvl; 
   }
-  
-  // Сколько слов хотя бы начаты (уровень > 0)
   let startedCount = VOCAB_DB.filter(card => (vocabLevels[card.id] || 0) > 0).length;
-
-  // Процент заполнения шкалы (сумма текущих уровней / максимально возможных)
   const pct = maxPossibleScore > 0 ? Math.round((scoreSum / maxPossibleScore) * 100) : 0;
-  
-  return { 
-    pct: pct, 
-    learned: startedCount, // Теперь здесь пишется сколько слов вы уже «трогали»
-    total: total 
-  };
+  return { pct: pct, learned: startedCount, total: total };
 }
 
 function openVocabModal() {
@@ -2258,17 +2434,15 @@ function handleVocabAnswer(cardId, remembered) {
   if (remembered) {
     if (lvl < 4) lvl++;
   } else {
-    lvl = 0; // Сбрасываем на ноль при забывании
+    lvl = 0; 
   }
   vocabLevels[cardId] = lvl;
   store("srpski-vocab-levels-v1", vocabLevels);
 
-  // Переходим к следующей карточке или завершаем сессию
   if (cur.index < cur.queue.length - 1) {
     cur.index++;
     renderVocabCard();
   } else {
-    // КРАСИВЫЙ ЭКРАН ФИНАЛА (вместо алярма и резкого выхода)
     cur.phase = "done";
     els.sections.innerHTML = "";
     els.track.innerHTML = "";
@@ -2287,10 +2461,8 @@ function handleVocabAnswer(cardId, remembered) {
         </div>
       </div>`;
 
-    // Кнопка повтора запускает сессию заново
     $("#vocab-again").addEventListener("click", openVocabModal);
 
-    // Кнопка возврата на главную в нижнем фиксированном баре
     els.bar.innerHTML = `<button class="primary" id="vocab-to-home">Назад на почетну страну</button>`;
     $("#vocab-to-home").addEventListener("click", () => {
       cur.isVocab = false;
@@ -2302,191 +2474,248 @@ function handleVocabAnswer(cardId, remembered) {
   }
 }
 
-/* ================================================================= */
-/* ДВИЖОК РАЗДЕЛА "ЧИТАЊЕ" (Антологија српске књижевности) */
-/* ================================================================= */
+/* ================= КАРТА УРОКОВ (ВОЗВРАЩЕНА НА МЕСТО) ================= */
 
-function getReadStats() {
-  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0 };
-  const totalTexts = Object.keys(READ_DB).length;
-  let readTexts = 0;
-  for (const id in READ_DB) {
-    if (readProgress[id] === true) readTexts++;
+function renderLessonsMap() {
+  let totalAll = 0, doneAll = 0;
+  for (const id of ALL_IDS) { 
+    const s = lessonStats(id); 
+    totalAll += s.total; 
+    doneAll += s.done; 
   }
-  const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
-  return { pct, texts: readTexts };
-}
+  const overallPct = totalAll ? Math.round(doneAll / totalAll * 100) : 0;
 
-function openReadCatalog() {
-  if (typeof READ_DB === "undefined" || Object.keys(READ_DB).length === 0) {
-    alert("Библиотека је тренутно празна.");
-    return;
-  }
+  const tabMap = {
+    a2: { title: "A2 Экспресс", ids: LINE_A2_IDS, class: "l-a2" },
+    b1: { title: "B1 Каркас", ids: LINE_B1_IDS, class: "l-b1" },
+    b2: { title: "B2 Беглая речь", ids: LINE_B2_IDS, class: "l-b2" },
+    c1: { title: "C1 Мастерство", ids: LINE_C1_IDS, class: "l-c1" },
+    lex: { title: "Лексика", ids: LINE_LEX_IDS, class: "l-lex" }
+  };
+  const currentTabInfo = tabMap[activeTab] || tabMap.a2;
 
-  let html = `
-    <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 16px;">
+  const getTabSub = (ids) => {
+    let completed = 0;
+    ids.forEach(id => {
+      const s = lessonStats(id);
+      if (s.total > 0 && s.done === s.total) completed++;
+    });
+    return completed === ids.length ? "✓" : `${completed}/${ids.length}`;
+  };
+
+  homeEl.innerHTML = `
+    <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 12px;">
         <button class="icon-btn" id="btn-dash-back" aria-label="Назад">
           <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2 2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink);">Читање</h2>
+        <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;">Лекције</h2>
       </div>
-      <button class="theme-toggle-btn" type="button" aria-label="Смени тему" style="margin-left: auto;">
-        ${curTheme === "dark" ? SUN_ICON : MOON_ICON}
-      </button>
-    </header>
-    <div style="padding-bottom: 24px;">
-  `;
-
-  for (const [id, data] of Object.entries(READ_DB)) {
-    const isDone = readProgress[id] === true;
-    
-    // Генерация красивой аватарки с инициалами автора на случай, если фото с Вики не загрузилось
-    const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
-
-    html += `
-      <button class="read-card" data-read="${id}">
-        <img class="read-avatar" src="${data.authorImg}" alt="${data.author}" onerror="this.src='${fallbackImg}'">
-        <div class="read-info">
-          <h3>${data.title}</h3>
-          <p>${data.author} · ⏱️ ${data.readTimeMins} мин (${data.wordCount} речи)</p>
-          <div><span class="read-meta-tag">${isDone ? '✅ Прочитано' : '📖 Текст за читанку'}</span></div>
+      
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="header-badge">
+          <div class="hb-bar"><i style="width:${overallPct}%"></i></div>
+          <span>${doneAll} / ${totalAll}</span>
         </div>
-      </button>
-    `;
-  }
+        <button class="theme-toggle-btn" type="button" aria-label="Смени тему">
+          ${curTheme === "dark" ? SUN_ICON : MOON_ICON}
+        </button>
+      </div>
+    </header>
 
-  html += `</div>`;
-  homeEl.innerHTML = html;
+    <nav class="level-tabs" aria-label="Нивои">
+      ${Object.keys(tabMap).map(k => `
+        <button class="level-tab${activeTab === k ? ' active' : ''}" data-tab="${k}">
+          <span class="tab-title">${k.toUpperCase()}</span>
+          <span class="tab-sub">${getTabSub(tabMap[k].ids)}</span>
+        </button>
+      `).join("")}
+    </nav>
+
+    <ol class="route ${currentTabInfo.class}">
+      ${currentTabInfo.ids.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}
+    </ol>
+  `;
 
   $("#btn-dash-back").addEventListener("click", renderDashboard);
-  homeEl.querySelectorAll(".read-card").forEach(b => {
-    b.addEventListener("click", () => startReadSession(b.dataset.read));
+
+  homeEl.querySelectorAll(".level-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeTab = tab.dataset.tab;
+      store("srpski-active-tab", activeTab);
+      renderLessonsMap();
+    });
   });
-  window.scrollTo(0, 0);
-}
 
-function startReadSession(readId) {
-  const data = READ_DB[readId];
-  cur = { isRead: true, readId: readId, data: data, index: 0, phase: "reading" };
-
-  homeEl.hidden = true;
-  lessonEl.hidden = false;
-  $("#rule-btn").hidden = true;
-  $("#reset").hidden = true;
-
-  els.title.innerHTML = `<small><span class="level-pill" style="background:#7b2cbf;">ЧИТАЊЕ</span> · ${data.author}</small><b>${data.title}</b>`;
-  els.sections.innerHTML = "";
-  els.track.innerHTML = "";
-
-  renderReadTextView();
-  window.scrollTo(0, 0);
-}
-
-// 1. Экзаменационный шаг: Пользователь читает текст
-function renderReadTextView() {
-  cur.phase = "reading";
-  els.sections.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--ink-3); padding:4px 0;">Корак 1 од 2: Прочитајте текст пажљиво</div>`;
-  els.track.innerHTML = "";
-
-  const data = cur.data;
-  const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
-
-  els.exercise.className = "card";
-  els.exercise.innerHTML = `
-    <div class="reading-container">
-      <div class="reading-header">
-        <img class="reading-author-img" src="${data.authorImg}" alt="${data.author}" onerror="this.src='${fallbackImg}'">
-        <div class="reading-title">
-          <h2>${data.title}</h2>
-          <p>${data.author}</p>
-        </div>
-      </div>
-      <div class="reading-body" lang="sr">${data.text}</div>
-    </div>
-  `;
-
-  els.bar.innerHTML = `<button class="primary" id="btn-to-questions">Прочитао сам, пређи на питања →</button>`;
-  $("#btn-to-questions").addEventListener("click", () => {
-    cur.phase = "answer";
-    cur.queue = cur.data.questions;
-    cur.index = 0;
-    renderReadQuestion();
+  homeEl.querySelectorAll(".route [data-id]").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.dataset.id;
+      const last = load(LAST_KEY, null);
+      const sec = last && last.id === id ? last.section : null;
+      openLesson(id, sec);
+    });
   });
 }
 
-// 2. Шаг вопросов по тексту
-function renderReadQuestion() {
-  cur.phase = "answer";
-  cur.state = {};
-  
-  // Рендерим трек точек для вопросов
-  els.track.innerHTML = cur.queue.map((q, i) => {
-    let c = (i === cur.index && cur.phase === "answer") ? "cur" 
-          : (q.result === true) ? "ok" 
-          : (q.result === false) ? "bad" : "";
-    return `<i class="${c}"></i>`;
-  }).join("");
+/* ================================================================= */
+/* МОДУЛЬ РЕПОРТОВ ОБ ОШИБКАХ (Админка, счетчик и кнопка) */
+/* ================================================================= */
 
-  els.sections.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--ink-3); padding:4px 0;">Питање ${cur.index + 1} од ${cur.queue.length}</div>`;
+const REPORTS_KEY = "srpski-reports-v1";
+function getReports() { return load(REPORTS_KEY, []); }
+function saveReports(reports) { store(REPORTS_KEY, reports); }
 
-  const q = cur.queue[cur.index];
-  let html = "";
-  if (q.format === "choice") html = viewChoice(q);
-  else if (q.format === "fill") html = viewFill(q);
+const FLAG_ICON = `<svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/></svg>`;
 
-  const metaHeader = `
-    <div class="card-meta">
-      <div class="card-breadcrumbs">
-        <span class="level-pill" style="background:#7b2cbf;">ПРОВЕРА</span>
-        <span class="crumb-lesson">${esc(cur.data.title)}</span>
-      </div>
-      <div class="card-counter">${cur.index + 1} / ${cur.queue.length}</div>
-    </div>`;
-
-  els.exercise.className = "card";
-  els.exercise.innerHTML = metaHeader + html + `<div id="tip"></div>`;
-  
-  bindExercise(q.format, q);
-  els.exercise.querySelector(".tools")?.remove();
-  renderBar();
+function reportButtonHTML() {
+  return `<button class="report-flag-btn" id="btn-report-issue" type="button" title="Пријави грешку у задатку">${FLAG_ICON}</button>`;
 }
 
-function finishRead() {
-  cur.phase = "done";
-  els.sections.innerHTML = "";
-  els.track.innerHTML = "";
+function openReportModal(taskContext) {
+  $("#report-modal")?.remove();
 
-  const total = cur.queue.length;
-  const correct = cur.queue.filter(q => q.result === true).length;
-  const isPassed = correct >= Math.ceil(total * 0.7); // Порог: 70% правильных
-
-  if (isPassed) {
-    readProgress[cur.readId] = true;
-    store("srpski-read-v1", readProgress);
+  // Если контекст не передался, пытаемся определить его автоматически
+  if (!taskContext) {
+    if (cur.isExam) taskContext = "Испитни центар";
+    else if (cur.isListen) taskContext = `Слушање (Видео: ${cur.id})`;
+    else if (cur.isQuiz) taskContext = `Паб Квиз (${cur.id})`;
+    else if (cur.isRead) taskContext = `Читање (${cur.readId})`;
+    else if (cur.id) taskContext = `Лекција: ${cur.id} (${cur.section})`;
+    else taskContext = "Главна страница / Опште";
   }
 
-  els.exercise.className = "card";
-  els.exercise.innerHTML = `
-    <div class="finish">
-      <div class="stolnjak"><b>${isPassed ? "Браво!" : "Покушајте поново!"}</b></div>
-      <div class="finish-num">${correct}<span> / ${total}</span></div>
-      <p style="font-size:16px; font-weight:600; color:var(--ink); margin: 6px 0 20px;">
-        ${isPassed ? "Успешно сте прочитали и савладали овај текст!" : "Нисте скупили довољно тачних одговора. Прочитајте текст пажљивије."}
-      </p>
-      <div class="row">
-        <button class="secondary" id="read-again">Прочитај поново</button>
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay";
+  modal.id = "report-modal";
+
+  modal.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <b>Пријави грешку у задатку</b>
+        <button class="tool" id="modal-close" type="button">Затвори</button>
       </div>
+      <div class="cfg-label">Контекст: <span style="color:var(--blue);">${esc(taskContext)}</span></div>
+      <div style="margin-bottom: 14px;">
+        <textarea id="report-text" placeholder="Шта није у реду? (опечатка, нетачан одговор...)" style="width: 100%; height: 100px; padding: 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font-family: inherit; font-size: 14px; resize: none; outline: none;"></textarea>
+      </div>
+      <button class="primary" id="btn-send-report" style="background: var(--red); color: #fff;">Сачувај у меморију</button>
     </div>`;
 
-  $("#read-again").addEventListener("click", () => startReadSession(cur.readId));
-  
-  els.bar.innerHTML = `<button class="primary" id="read-to-home">Назад на списак текстова</button>`;
-  $("#read-to-home").addEventListener("click", () => {
-    cur.isRead = false;
-    openReadCatalog();
+  document.body.appendChild(modal);
+
+  $("#modal-close", modal).addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  // Железобетонная логика сохранения
+  $("#btn-send-report", modal).addEventListener("click", () => {
+    const text = $("#report-text", modal).value.trim();
+    if (!text) {
+      alert("Молимо унесите опис проблема.");
+      return;
+    }
+
+    try {
+      const reports = getReports();
+      reports.push({
+        id: "rep_" + Math.random().toString(36).substr(2, 9),
+        date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        context: taskContext,
+        comment: text
+      });
+
+      saveReports(reports);
+      modal.remove();
+      
+      // Сразу обновляем счетчик на главной
+      updateAdminReportsCounter();
+      
+      alert("Грешка је успешно сачувана! Проверите је на почетној страни у футеру.");
+    } catch (e) {
+      alert("Грешка при чувању: " + e.message);
+    }
   });
 }
 
-// Запуск приложения
+function openAdminReportsModal() {
+  $("#admin-reports-modal")?.remove();
+
+  const reports = getReports();
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay";
+  modal.id = "admin-reports-modal";
+
+  let itemsHTML = "";
+  if (reports.length === 0) {
+    itemsHTML = `<div style="text-align: center; color: var(--ink-3); padding: 30px 0;">Нема пријављених грешака у меморији. Све је чисто! 🎉</div>`;
+  } else {
+    itemsHTML = reports.map(r => `
+      <div class="report-item" data-id="${r.id}">
+        <div class="report-item-head">
+          <span>📍 ${esc(r.context)}</span>
+          <button class="tool" style="color: var(--red); font-size: 12px;" onclick="deleteReport('${r.id}')">Обриши</button>
+        </div>
+        <div class="report-item-text">💬 "${esc(r.comment)}"</div>
+        <div class="report-item-meta">📅 ${r.date} &nbsp;|&nbsp; ID: ${r.id}</div>
+      </div>
+    `).join("");
+  }
+
+  modal.innerHTML = `
+    <div class="modal-sheet" style="max-height: 85vh;">
+      <div class="modal-head">
+        <b>Сачуване грешке (${reports.length})</b>
+        <button class="tool" id="modal-close" type="button">Затвори</button>
+      </div>
+      <div style="overflow-y: auto; max-height: 60vh; padding-right: 4px; margin-top: 10px;">
+        ${itemsHTML}
+      </div>
+      ${reports.length > 0 ? `<button class="secondary" id="btn-clear-all-reports" style="margin-top: 14px; color: var(--red);">Обриши све пријаве</button>` : ''}
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  $("#modal-close", modal).addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  const clearBtn = $("#btn-clear-all-reports", modal);
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      if (confirm("Обрисати све пријаве из меморије?")) {
+        saveReports([]);
+        modal.remove();
+        openAdminReportsModal();
+        updateAdminReportsCounter();
+      }
+    });
+  }
+}
+
+window.deleteReport = function(id) {
+  let reports = getReports();
+  reports = reports.filter(r => r.id !== id);
+  saveReports(reports);
+  openAdminReportsModal();
+  updateAdminReportsCounter();
+};
+
+function updateAdminReportsCounter() {
+  const btn = $("#btn-admin-reports");
+  if (!btn) return;
+  
+  const reports = getReports();
+  const count = reports.length;
+  
+  // Меняем текст кнопки на реальное количество
+  btn.textContent = `Пријављене грешке (${count})`;
+  
+  // ВСЕГДА делаем кнопку видимой, раз в ней есть ошибки
+  if (count > 0) {
+    btn.style.display = "inline-block";
+    btn.style.fontWeight = "750";
+  } else {
+    btn.style.display = "none";
+  }
+}
+
+// Запуск приложения с Дашборда
 renderDashboard();
