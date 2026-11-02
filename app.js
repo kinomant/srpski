@@ -720,7 +720,9 @@ function goHome() {
   homeEl.hidden = false;
   closeRule();
   
-  if (isListen || isRead) renderListenMap();
+  // Возвращаем строго на соответствующий экран или дашборд
+  if (isListen) renderListenMap();
+  else if (isRead) openReadCatalog(); 
   else if (isExam || isVocab) renderDashboard();
   else renderLessonsMap();
   
@@ -1742,21 +1744,25 @@ function getReadStats() {
   return { pct, texts: readTexts };
 }
 
+// 1. Показ каталога книг
 function openReadCatalog() {
   if (typeof READ_DB === "undefined" || Object.keys(READ_DB).length === 0) {
     alert("Библиотека је тренутно празна.");
     return;
   }
 
-  const keys = Object.keys(READ_DB);
-  const totalTexts = keys.length;
-  
-  // Считаем прочитанные тексты
-  let readTexts = 0;
-  keys.forEach(id => {
-    if (readProgress[id] === true) readTexts++;
+  const bookKeys = Object.keys(READ_DB);
+  let totalChapters = 0;
+  let readChapters = 0;
+
+  bookKeys.forEach(bookKey => {
+    READ_DB[bookKey].chapters.forEach(ch => {
+      totalChapters++;
+      if (readProgress[ch.id] === true) readChapters++;
+    });
   });
-  const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
+
+  const totalPct = totalChapters > 0 ? Math.round((readChapters / totalChapters) * 100) : 0;
 
   let html = `
     <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 16px;">
@@ -1772,47 +1778,50 @@ function openReadCatalog() {
     </header>
 
     <div style="padding-bottom: 24px;">
-      <!-- Дашборд прогресса -->
+      <!-- Прогресс-бар -->
       <div class="read-progress-dashboard" style="background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 16px 20px; margin-bottom: 20px;">
-        <div class="read-progress-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--ink);">
-          <span>Прогрес читања: ${readTexts} од ${totalTexts} текстова</span>
-          <span>${pct}%</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--ink);">
+          <span>Укупни прогрес: ${readChapters} од ${totalChapters} поглавља</span>
+          <span>${totalPct}%</span>
         </div>
-        <div class="read-progress-bar-bg" style="background: var(--surface-2); border-radius: 8px; height: 10px; overflow: hidden; width: 100%;">
-          <div class="read-progress-bar-fill" style="background: #7b2cbf; height: 100%; width: ${pct}%; border-radius: 8px; transition: width 0.4s ease;"></div>
+        <div style="background: var(--surface-2); border-radius: 8px; height: 10px; overflow: hidden; width: 100%;">
+          <div style="background: #7b2cbf; height: 100%; width: ${totalPct}%; border-radius: 8px; transition: width 0.4s ease;"></div>
         </div>
       </div>
 
-      <!-- Сетка карточек -->
-      <div class="read-cards-grid">
+      <!-- Список книг-карточек -->
+      <div style="display: grid; gap: 20px;">
   `;
 
-  keys.forEach(id => {
-    const data = READ_DB[id];
-    const isDone = readProgress[id] === true;
-    const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
+  bookKeys.forEach(bookKey => {
+    const book = READ_DB[bookKey];
+    const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(book.author)}&background=7b2cbf&color=fff&size=128`;
+
+    let chaptersHTML = book.chapters.map(ch => {
+      const isDone = readProgress[ch.id] === true;
+      return `
+        <button class="read-chapter-btn" onclick="startReadSession('${bookKey}', '${ch.id}')" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; text-align: left; transition: background 0.1s;">
+          <span style="font-size: 14px; font-weight: 600; color: var(--ink);">${ch.title}</span>
+          <span style="font-size: 12px; font-weight: 600; color: ${isDone ? '#10b981' : 'var(--ink-3)'};">
+            ${isDone ? '✅ Прочитано' : '📖 Читај'}
+          </span>
+        </button>
+      `;
+    }).join("");
 
     html += `
-      <div class="read-card" data-read="${id}">
-        <div class="read-card-header">
-          <img class="read-card-author-img" src="${data.authorImg}" alt="${data.author}" onerror="this.src='${fallbackImg}'">
-          <div class="read-card-meta">
-            <span class="read-card-category">${data.category}</span>
-            <span class="read-card-author">${data.author}</span>
+      <div style="background: var(--surface); border: 1.5px solid var(--line); border-radius: 20px; padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+          <img src="${book.authorImg}" alt="${book.author}" onerror="this.src='${fallbackImg}'" style="width: 54px; height: 54px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line);">
+          <div>
+            <span style="font-size: 11px; font-weight: 700; color: #7b2cbf; text-transform: uppercase;">${book.category}</span>
+            <h3 style="font-size: 17px; font-weight: 700; color: var(--ink); margin: 2px 0 2px 0;">${book.bookTitle}</h3>
+            <p style="font-size: 13.5px; color: var(--ink-2); margin: 0;">${book.author}</p>
           </div>
         </div>
-        <div class="read-card-body">
-          <div class="read-card-title">${data.title}</div>
-          <div class="read-card-info">
-            <span>⏱️ ~${data.readTimeMins} мин</span>
-            <span>📝 ${data.wordCount} речи</span>
-          </div>
-        </div>
-        <div class="read-card-footer">
-          <span class="read-status-badge ${isDone ? 'completed' : 'pending'}">
-            ${isDone ? '✅ Прочитано' : '📖 Непрочитано'}
-          </span>
-          <span style="color: #7b2cbf; font-weight: 600; font-size: 14px;">Читај →</span>
+        
+        <div style="display: grid; gap: 8px;">
+          ${chaptersHTML}
         </div>
       </div>
     `;
@@ -1821,23 +1830,23 @@ function openReadCatalog() {
   html += `</div></div>`;
   homeEl.innerHTML = html;
 
+  // Возврат на главный дашборд по кнопке «Назад»
   $("#btn-dash-back").addEventListener("click", renderDashboard);
-  homeEl.querySelectorAll(".read-card").forEach(b => {
-    b.addEventListener("click", () => startReadSession(b.dataset.read));
-  });
-  window.scrollTo(0, 0);
 }
 
-function startReadSession(readId) {
-  const data = READ_DB[readId];
-  cur = { isRead: true, readId: readId, data: data, index: 0, phase: "reading" };
+// 2. Запуск чтения конкретной главы выбранной книги
+function startReadSession(bookKey, chapterId) {
+  const book = READ_DB[bookKey];
+  const chapter = book.chapters.find(ch => ch.id === chapterId);
+  
+  cur = { isRead: true, bookKey: bookKey, readId: chapterId, data: chapter, bookData: book, index: 0, phase: "reading" };
 
   homeEl.hidden = true;
   lessonEl.hidden = false;
   $("#rule-btn").hidden = true;
   $("#reset").hidden = true;
 
-  els.title.innerHTML = `<small><span class="level-pill" style="background:#7b2cbf;">ЧИТАЊЕ</span> · ${data.author}</small><b>${data.title}</b>`;
+  els.title.innerHTML = `<small><span class="level-pill" style="background:#7b2cbf;">ЧИТАЊЕ</span> · ${book.author}</small><b>${book.bookTitle}: ${chapter.title}</b>`;
   els.sections.innerHTML = "";
   els.track.innerHTML = "";
 
