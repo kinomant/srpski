@@ -794,3 +794,106 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
   margin-bottom: 1.5em;
   text-align: justify;
 }
+
+/* --- НОВЫЙ ДИЗАЙН БАРАБАНА (МИНИ-МИНУТКИ) --- */
+
+.drum-section {
+  margin: 24px 0 12px;
+}
+
+.drum-section-title {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+
+.drum-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 4px 16px 14px;
+}
+.drum-scroll::-webkit-scrollbar { display: none; }
+
+.drum-card {
+  flex: 0 0 280px;
+  scroll-snap-align: start;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 155px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.drum-card:hover {
+  border-color: var(--blue);
+  transform: translateY(-2px);
+}
+
+.drum-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  padding: 3px 8px;
+  border-radius: 6px;
+  align-self: flex-start;
+}
+
+.drum-card h4 {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 10px 0 6px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.drum-card p {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+/* Кнопка статуса "Изучено" на карточках барабана */
+.drum-check-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drum-check-btn:active {
+  transform: scale(0.94);
+}
+
+.drum-check-btn.done {
+  background: var(--green-soft);
+  border-color: var(--green);
+  color: var(--green);
+}
