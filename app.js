@@ -508,6 +508,12 @@ function renderDashboard() {
     `;
   };
 
+  // Генерация умного барабана (5 случайных карточек с приоритетом неизученных)
+  let drumHTML = "";
+  if (typeof MINUTKE_DB !== "undefined") {
+    drumHTML = `<div class="drum-section" id="drum-section-container">${renderDrumHTML()}</div>`;
+  }
+
   homeEl.innerHTML = `
     <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 8px;">
       <h2 style="margin: 0; font-family: var(--display); font-size: 24px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;">
@@ -528,14 +534,18 @@ function renderDashboard() {
       </div>
     </div>
 
+    <!-- Сетка модулей (без старого экзамена, добавлен Pričaj mi) -->
     <div class="modules-grid">
       ${buildCard('mod-btn-lex', 'Лекције', 'Основе и граматика', lexPct, 'm-lex', `<span style="font-size:16px">${lexPct}%</span>`)}
       ${buildCard('mod-btn-listen', 'Слушање', 'Живи говор и подкасти', listenStats.pct, 'm-listen', `<span style="font-size:16px">${listenStats.doneMins}</span><span style="font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px;">мин</span>`)}
       ${buildCard('mod-btn-quiz', 'Квизови', 'Култура, спорт, друштво', quizStats.pct, 'm-quiz', `<span style="font-size:15px">${quizStats.points}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">бодова</span>`)}
-      ${buildCard('mod-btn-exam', 'Испит', 'Срез знања и грешке', levelInfo.pct, 'm-exam', `<span style="font-size:20px; color:var(--red);">${levelInfo.name}</span>`)}
+      ${buildCard('mod-btn-pricaj', 'Причај ми', 'Кратке приче и глас', 0, 'm-pricaj', `<span style="font-size:20px">🗣️</span>`)}
       ${buildCard('mod-btn-words', 'Картице', 'Памћење речи', wordsPct, 'm-words', `<span style="font-size:15px">0</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">речи</span>`)}
       ${buildCard('mod-btn-read', 'Читање', 'Текстови и превод', readStats.pct, 'm-read', `<span style="font-size:16px">${readStats.texts}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">текстова</span>`)}
     </div>
+
+    <!-- Карточка-барабан с мини-минутками -->
+    ${drumHTML}
 
     <!-- ФУТЕР ГЛАВНОЙ СТРАНИЦЫ С КНОПКОЙ АДМИНКИ -->
     <div class="home-foot">
@@ -553,13 +563,16 @@ function renderDashboard() {
     </div>
   `;
 
-// Привязка событий главной страницы
+  // Привязка событий главной страницы
   $("#mod-btn-lex").addEventListener("click", renderLessonsMap);
-  $("#mod-btn-exam").addEventListener("click", openExamModal);
   $("#mod-btn-listen").addEventListener("click", renderListenMap);
   $("#mod-btn-words").addEventListener("click", openVocabModal);
   $("#mod-btn-quiz").addEventListener("click", openQuizMenu);   
   $("#mod-btn-read").addEventListener("click", openReadCatalog);
+  $("#mod-btn-pricaj").addEventListener("click", openPricajMiCatalog);
+
+  // Привязываем клики по галочкам барабана
+  bindDrumEvents();
 
   $("#btn-export")?.addEventListener("click", exportProgress);
   $("#btn-import")?.addEventListener("click", importProgress);
@@ -658,6 +671,442 @@ function renderLessonsMap() {
   });
 }
 
+/* ================================================================= */
+/* МОДУЛЬ "МИНИ-МИНУТКИ" (УМНЫЙ БАРАБАН С ВЫБОРОМ 5 КАРТОЧЕК И ГАЛОЧКАМИ) */
+/* ================================================================= */
+
+// Хранилище для отметок "изучено" (например, { "m-01": true, "m-03": true })
+const minutkeProgress = load("srpski-minutke-v1", {});
+
+function getSmartMinutkeQueue() {
+  if (typeof MINUTKE_DB === "undefined" || MINUTKE_DB.length === 0) return [];
+
+  // Делим карточки на неизученные и изученные
+  const unread = MINUTKE_DB.filter(m => !minutkeProgress[m.id]);
+  const read = MINUTKE_DB.filter(m => minutkeProgress[m.id]);
+
+  // Перемешиваем обе группы
+  const shuffledUnread = shuffle(unread);
+  const shuffledRead = shuffle(read);
+
+  // Собираем микс из 5 карточек: сначала все неизученные, если их меньше 5 — добираем из изученных
+  let pool = [...shuffledUnread, ...shuffledRead];
+  
+  // Если карточек в базе больше 5, берем ровно 5 штук
+  return pool.slice(0, 5);
+}
+
+function toggleMinutkeRead(id, event) {
+  event.stopPropagation(); // Чтобы клик по кнопке не открывал что-то лишнее
+  minutkeProgress[id] = !minutkeProgress[id];
+  store("srpski-minutke-v1", minutkeProgress);
+
+  // Перерисовываем только барабан на главной, чтобы обновился статус кнопки
+  const drumContainer = $("#drum-section-container");
+  if (drumContainer) {
+    drumContainer.innerHTML = renderDrumHTML();
+    bindDrumEvents();
+  }
+}
+
+function renderDrumHTML() {
+  if (typeof MINUTKE_DB === "undefined") return "";
+  
+  const currentQueue = getSmartMinutkeQueue();
+
+  return `
+    <div class="drum-section-title">💡 Занимљивости и мини-лекције (5 данас)</div>
+    <div class="drum-scroll">
+      ${currentQueue.map(m => {
+        const isDone = !!minutkeProgress[m.id];
+        return `
+          <div class="drum-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <span class="drum-tag">${m.tag}</span>
+              <button class="drum-check-btn ${isDone ? 'done' : ''}" data-mid="${m.id}" type="button" title="${isDone ? 'Изучено' : 'Означи као изучено'}">
+                ${isDone ? '✓ Изучено' : '○ Означи'}
+              </button>
+            </div>
+            <div>
+              <h4>${m.title}</h4>
+              <p>${m.content}</p>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function bindDrumEvents() {
+  document.querySelectorAll(".drum-check-btn").forEach(btn => {
+    btn.addEventListener("click", e => toggleMinutkeRead(btn.dataset.mid, e));
+  });
+}
+
+/* ================================================================= */
+/* ДВИЖОК РАЗДЕЛА "ПРИЧАЈ МИ" (ИСПРАВЛЕННАЯ ПРОВЕРКА ОТВЕТОВ) */
+/* ================================================================= */
+
+function openPricajMiCatalog() {
+  if (typeof PRICAJ_MI_DB === "undefined" || Object.keys(PRICAJ_MI_DB).length === 0) {
+    alert("Раздел је тренутно празан.");
+    return;
+  }
+
+  cur.isPricajMi = false;
+  cur.isRead = false;
+  cur.isListen = false;
+  cur.isQuiz = false;
+
+  // Если мы были в режиме урока, возвращаем видимость главного экрана
+  lessonEl.hidden = true;
+  homeEl.hidden = false;
+  $("#rule-btn").hidden = false;
+  $("#reset").hidden = false;
+
+  let html = `
+    <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="icon-btn" id="btn-pm-catalog-back" aria-label="Назад">
+          <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2 2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink);">Pričaj mi</h2>
+      </div>
+      <button class="theme-toggle-btn" type="button" aria-label="Смени тему">
+        ${curTheme === "dark" ? SUN_ICON : MOON_ICON}
+      </button>
+    </header>
+    <div style="padding-bottom: 24px; display: grid; gap: 14px;">
+  `;
+
+  for (const [id, item] of Object.entries(PRICAJ_MI_DB)) {
+    html += `
+      <button class="read-card" data-pm="${id}" style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <span style="font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase;">${item.category}</span>
+          <h3 style="margin: 4px 0 2px; font-size: 16px; font-weight: 700; color: var(--ink);">${item.title}</h3>
+          <p style="margin: 0; font-size: 12.5px; color: var(--ink-3);">⏱️ ${item.readTimeMins} мин · Текст и глас</p>
+        </div>
+        <span style="font-size: 20px;">🗣️</span>
+      </button>
+    `;
+  }
+
+  html += `</div>`;
+  homeEl.innerHTML = html;
+
+  // Кнопка НАЗАД из каталога ведем СТРОГО на Главную (renderDashboard)
+  $("#btn-pm-catalog-back").addEventListener("click", () => {
+    // Возвращаем стандартный обработчик на общую кнопку назад
+    const backBtn = $("#back");
+    if (backBtn) backBtn.onclick = null;
+    renderDashboard();
+  });
+
+  homeEl.querySelectorAll(".read-card").forEach(b => {
+    b.addEventListener("click", () => startPricajMiSession(b.dataset.pm));
+  });
+  window.scrollTo(0, 0);
+}
+
+
+
+function startPricajMiSession(id) {
+  const item = PRICAJ_MI_DB[id];
+  cur = { 
+    isPricajMi: true, 
+    pmId: id, 
+    data: item, 
+    index: 0, 
+    phase: "reading", 
+    queue: item.questions || [] 
+  };
+
+  homeEl.hidden = true;
+  lessonEl.hidden = false;
+  $("#rule-btn").hidden = true;
+  $("#reset").hidden = true;
+
+  els.title.innerHTML = `<small><span class="level-pill" style="background:var(--blue);">ПРИЧАЈ МИ</span> · ${item.category}</small><b>${item.title}</b>`;
+  els.sections.innerHTML = "";
+  els.track.innerHTML = "";
+
+  // Перехватываем стандартную кнопку "назад" в шапке урока
+  const backBtn = $("#back");
+  if (backBtn) {
+    backBtn.onclick = () => {
+      cur.isPricajMi = false;
+      openPricajMiCatalog();
+    };
+  }
+
+  renderPricajMiTextView();
+  window.scrollTo(0, 0);
+}
+
+function renderPricajMiTextView() {
+  cur.phase = "reading";
+  els.sections.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--ink-3); padding:4px 0;">Корак 1: Прочитајте и послушајте причу</div>`;
+  els.track.innerHTML = "";
+
+  const item = cur.data;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="reader-container" style="max-width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 20px;">
+        <button id="btn-pm-text-back" style="background: none; border: none; color: var(--blue); font-weight: 600; cursor: pointer; padding: 0;">← Назад на списак</button>
+        <div>${speakButtonHTML(item.audioText)} <span style="font-size:12px; color:var(--ink-3); margin-left:4px;">Послушај глас</span></div>
+      </div>
+
+      <h2 style="font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 16px;">${item.title}</h2>
+      
+      <div class="reading-body" lang="sr" style="font-size: 17px; line-height: 1.8; color: var(--ink);">
+        ${item.text}
+      </div>
+    </div>
+  `;
+
+  // Кнопка "Назад на списак" изнутри самой истории возвращает в каталог Pričaj mi
+  $("#btn-pm-text-back").addEventListener("click", () => {
+    openPricajMiCatalog();
+  });
+
+  if (item.questions && item.questions.length > 0) {
+    els.bar.innerHTML = `<button class="primary" id="pm-to-q" style="background: var(--blue); color: white;">Проверите разумевање →</button>`;
+    $("#pm-to-q").addEventListener("click", () => {
+      cur.phase = "answer";
+      cur.queue = item.questions;
+      cur.index = 0;
+      renderPricajMiQuestion();
+    });
+  } else {
+    els.bar.innerHTML = `<button class="primary" id="pm-back-alt">Завршено · Назад</button>`;
+    $("#pm-back-alt").addEventListener("click", () => {
+      openPricajMiCatalog();
+    });
+  }
+}
+
+function renderPricajMiTextView() {
+  cur.phase = "reading";
+  els.sections.innerHTML = `<div style="font-size:13px; font-weight:600; color:var(--ink-3); padding:4px 0;">Корак 1: Прочитајте и послушајте причу</div>`;
+  els.track.innerHTML = "";
+
+  const item = cur.data;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="reader-container" style="max-width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 20px;">
+        <button id="btn-pm-back" style="background: none; border: none; color: var(--blue); font-weight: 600; cursor: pointer; padding: 0;">← Назад на списак</button>
+        <div>${speakButtonHTML(item.audioText)} <span style="font-size:12px; color:var(--ink-3); margin-left:4px;">Послушај глас</span></div>
+      </div>
+
+      <h2 style="font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 16px;">${item.title}</h2>
+      
+      <div class="reading-body" lang="sr" style="font-size: 17px; line-height: 1.8; color: var(--ink);">
+        ${item.text}
+      </div>
+    </div>
+  `;
+
+  // Надежная привязка кнопки назад через ID
+  $("#btn-pm-back").addEventListener("click", () => {
+    cur.isPricajMi = false;
+    openPricajMiCatalog();
+  });
+
+  if (item.questions && item.questions.length > 0) {
+    els.bar.innerHTML = `<button class="primary" id="pm-to-q" style="background: var(--blue); color: white;">Проверите разумевање →</button>`;
+    $("#pm-to-q").addEventListener("click", () => {
+      cur.phase = "answer";
+      cur.queue = item.questions;
+      cur.index = 0;
+      renderPricajMiQuestion();
+    });
+  } else {
+    els.bar.innerHTML = `<button class="primary" id="pm-back-alt">Завршено · Назад</button>`;
+    $("#pm-back-alt").addEventListener("click", () => {
+      cur.isPricajMi = false;
+      openPricajMiCatalog();
+    });
+  }
+}
+
+function renderPricajMiQuestion() {
+  cur.phase = "answer";
+  cur.state = {};
+  
+  // Трек прогресса вопросов
+  els.track.innerHTML = cur.queue.map((q, i) => {
+    let c = (i === cur.index && cur.phase === "answer") ? "cur" 
+          : (q.result === true) ? "ok" 
+          : (q.result === false) ? "bad" : "";
+    return `<i class="${c}"></i>`;
+  }).join("");
+
+  els.sections.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--ink-3); padding:4px 0;">Питање ${cur.index + 1} од ${cur.queue.length}</div>`;
+
+  const q = cur.queue[cur.index];
+  let html = "";
+
+  if (q.format === "choice") {
+    if (!cur.state.opts) cur.state.opts = shuffle(q.opts);
+    html = `
+      <p class="ex-sr" lang="sr">${q.sr} ${speakButtonHTML(q.sr)}</p>
+      <div class="opts">
+        ${cur.state.opts.map((o, i) => `
+          <button class="opt" data-v="${esc(o)}">
+            <span class="key">${KEYS[i]}</span>
+            <span lang="sr">${o}</span>
+          </button>
+        `).join("")}
+      </div>`;
+  } else if (q.format === "fill") {
+    const parts = q.sr.replace(/___/g, "{{_}}").split("{{_}}");
+    html = `
+      <div class="fill-line" lang="sr">
+        ${parts.map((p, i) => p + (i < parts.length - 1 ? `<input class="blank" data-idx="${i}" autocomplete="off" autocapitalize="off" spellcheck="false">` : "")).join("")} 
+        ${speakButtonHTML(q.sr)}
+      </div>`;
+  }
+
+  const metaHeader = `
+    <div class="card-meta">
+      <div class="card-breadcrumbs">
+        <span class="level-pill" style="background:var(--blue);">PRIЧАЈ МИ</span>
+        <span class="crumb-lesson">${esc(cur.data.title)}</span>
+      </div>
+      <div class="card-counter">${cur.index + 1} / ${cur.queue.length}</div>
+    </div>`;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = metaHeader + html + `<div id="tip"></div>`;
+
+  // Привязка кликов для выбора варианта ответа
+  els.exercise.querySelectorAll(".opt").forEach(b => {
+    b.addEventListener("click", () => {
+      els.exercise.querySelectorAll(".opt").forEach(o => o.classList.remove("sel"));
+      b.classList.add("sel");
+      cur.state.selected = b.dataset.v;
+      renderPricajMiBar();
+    });
+  });
+
+  // Привязка инпутов для fill
+  els.exercise.querySelectorAll(".blank").forEach(inp => {
+    inp.addEventListener("input", () => {
+      inp.style.width = Math.max(7, inp.value.length + 2) + "ch";
+      renderPricajMiBar();
+    });
+  });
+
+  renderPricajMiBar();
+}
+
+function renderPricajMiBar() {
+  const q = cur.queue[cur.index];
+  let hasAns = false;
+  if (q.format === "choice") hasAns = !!cur.state.selected;
+  if (q.format === "fill") hasAns = [...els.exercise.querySelectorAll(".blank")].every(i => i.value.trim());
+
+  if (cur.phase === "answer") {
+    els.bar.innerHTML = `<button class="primary" id="pm-check" ${hasAns ? "" : "disabled"}>Проверить</button>`;
+    $("#pm-check").addEventListener("click", checkPricajMiAnswer);
+  }
+}
+
+function checkPricajMiAnswer() {
+  const q = cur.queue[cur.index];
+  const ex = els.exercise;
+  let ok = false, right = q.ans;
+
+  if (q.format === "choice") {
+    ok = cur.state.selected === q.ans;
+    ex.querySelectorAll(".opt").forEach(o => {
+      if (o.dataset.v === q.ans) o.classList.add("right");
+      else if (o.dataset.v === cur.state.selected) o.classList.add("wrong");
+      o.classList.remove("sel");
+    });
+  } else if (q.format === "fill") {
+    const inputs = [...ex.querySelectorAll(".blank")];
+    const accepted = [q.ans, ...(q.alt || [])];
+    ok = inputs.every(inp => {
+      const userNorm = normalize(inp.value);
+      return accepted.some(acc => normalize(acc) === userNorm || stripDiacritics(userNorm) === stripDiacritics(normalize(acc)));
+    });
+    inputs.forEach(inp => {
+      inp.classList.add(ok ? "right" : "wrong");
+      inp.readOnly = true;
+    });
+  }
+
+  ex.classList.add("locked");
+  q.result = ok;
+
+  // Обновляем трек
+  els.track.innerHTML = cur.queue.map((item, i) => {
+    let c = (i === cur.index) ? "cur" 
+          : (item.result === true) ? "ok" 
+          : (item.result === false) ? "bad" : "";
+    return `<i class="${c}"></i>`;
+  }).join("");
+
+  els.bar.innerHTML = `
+    <div class="feedback ${ok ? "ok" : "bad"}">
+      <div class="fb-title">${ok ? "Браво!" : "Нетачно!"}<span class="fb-sub">${ok ? "тачно" : "нетачно"}</span></div>
+      ${ok ? "" : `<div class="fb-ans">Тачан одговор: <b lang="sr">${right}</b></div>`}
+    </div>
+    <button class="primary" id="pm-next">Даље →</button>`;
+
+  $("#pm-next").addEventListener("click", nextPricajMiQuestion);
+}
+
+function nextPricajMiQuestion() {
+  if (cur.index < cur.queue.length - 1) {
+    cur.index++;
+    renderPricajMiQuestion();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } else {
+    finishPricajMi();
+  }
+}
+
+function finishPricajMi() {
+  cur.phase = "done";
+  els.track.innerHTML = cur.queue.map(() => `<i class="ok"></i>`).join("");
+  els.sections.innerHTML = "";
+
+  const total = cur.queue.length;
+  const correct = cur.queue.filter(q => q.result === true).length;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="finish">
+      <div class="stolnjak"><b>Одлично!</b></div>
+      <div class="finish-num">${correct}<span> / ${total}</span></div>
+      <p style="font-size:16px; font-weight:600; color:var(--ink); margin: 6px 0 20px;">
+        Успешно сте завршили ову причу и проверили разумевање!
+      </p>
+      <div class="row">
+        <button class="secondary" id="pm-to-catalog-fin">Назад на списак прича</button>
+      </div>
+    </div>`;
+
+  $("#pm-to-catalog-fin").addEventListener("click", () => {
+    cur.isPricajMi = false;
+    openPricajMiCatalog();
+  });
+  
+  els.bar.innerHTML = `<button class="primary" id="pm-to-catalog-bar">Назад на списак</button>`;
+  $("#pm-to-catalog-bar").addEventListener("click", () => {
+    cur.isPricajMi = false;
+    openPricajMiCatalog();
+  });
+}
+
 /* ================= 4. ДВИЖОК УРОКОВ ================= */
 let cur = { id: null, section: null, index: 0, order: [], state: {}, phase: "answer" };
 
@@ -705,11 +1154,24 @@ function goHome() {
   const isExam = cur.isExam;
   const isVocab = cur.isVocab;
   const isRead = cur.isRead;
+  const isPricajMi = cur.isPricajMi;
+  
+  // Если мы были в режиме чтения книги/главы и нажали общую кнопку "Назад" в шапке
+  if (isRead) {
+      exitReadSession();
+      return;
+    }
+
+  // Если мы были в режиме Pričaj mi и нажали общую кнопку "Назад" в шапке
+  if (isPricajMi) {
+    cur.isPricajMi = false;
+    openPricajMiCatalog(); // Возвращаем в список историй Pričaj mi
+    return;
+  }
   
   cur.isExam = false;
   cur.isListen = false;
   cur.isVocab = false;
-  cur.isRead = false;
   
   const svb = $("#sticky-video-box");
   if (svb) { svb.innerHTML = ""; svb.hidden = true; }
@@ -720,9 +1182,7 @@ function goHome() {
   homeEl.hidden = false;
   closeRule();
   
-  // Возвращаем строго на соответствующий экран или дашборд
   if (isListen) renderListenMap();
-  else if (isRead) openReadCatalog(); 
   else if (isExam || isVocab) renderDashboard();
   else renderLessonsMap();
   
@@ -1862,9 +2322,9 @@ function renderReadTextView() {
   els.track.innerHTML = "";
 
   const data = cur.data;
+  const book = cur.bookData; 
   const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author)}&background=7b2cbf&color=fff&size=128`;
 
-  // Превращаем текст в красивые абзацы, разделенные переносами строк
   const formattedParagraphs = data.text
     .split('\n')
     .map(p => p.trim())
@@ -1875,9 +2335,9 @@ function renderReadTextView() {
   els.exercise.className = "card";
   els.exercise.innerHTML = `
     <div class="reader-container" style="max-width: 100%;">
-      <!-- Тулбар: Кнопка назад + зум шрифта -->
+      <!-- ВЫЗЫВАЕМ СПЕЦИАЛЬНУЮ ФУНКЦИЮ ВЫХОДА ИЗ ЧТЕНИЯ -->
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 20px;">
-        <button onclick="openReadCatalog()" style="background: none; border: none; color: #7b2cbf; font-weight: 600; cursor: pointer; padding: 0;">← Назад на списак</button>
+        <button onclick="exitReadSession()" style="background: none; border: none; color: #7b2cbf; font-weight: 600; cursor: pointer; padding: 0;">← Назад на списак</button>
         
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 12px; color: var(--ink-3);">Величина слова:</span>
@@ -1894,7 +2354,6 @@ function renderReadTextView() {
         </div>
       </div>
 
-      <!-- Блок текста с динамическим размером шрифта -->
       <div id="reader-text-content" class="reading-body" lang="sr" style="font-size: ${currentReadFontSize}px; line-height: 1.8; color: var(--ink);">
         ${formattedParagraphs}
       </div>
@@ -1909,6 +2368,22 @@ function renderReadTextView() {
     renderReadQuestion();
   });
 }
+
+// ДОБАВЬ ЭТУ ФУНКЦИЮ В ЛЮБОЕ МЕСТО app.js
+function exitReadSession() {
+  cur.isRead = false;
+  lessonEl.hidden = true;      // Скрываем экран упражнений/чтения
+  homeEl.hidden = false;       // Показываем главный экран
+  $("#rule-btn").hidden = false;
+  $("#reset").hidden = false;
+  openReadCatalog();           // Открываем каталог книг
+}
+
+// Глобальная функция для гарантированного возврата к списку книг
+window.exitReadToCatalog = function() {
+  cur.isRead = false;
+  openReadCatalog();
+};
 
 // Функция изменения размера шрифта текста в режиме чтения
 function changeReadFontSize(delta) {
@@ -2336,24 +2811,12 @@ function fullResetProgress() {
   }
 }
 
-/* ================= ДВИЖОК РАЗДЕЛА "КАРТИЦЕ" И "ЧИТАЊЕ" ================= */
+/* ================================================================= */
+/* МОДУЛЬ "КАРТИЦЕ" (КЛАССИЧЕСКАЯ ЛОГИКА: ЗНАЮ / НЕ ЗНАЮ) */
+/* ================================================================= */
 
-const vocabLevels = load("srpski-vocab-levels-v1", {});
-
-function getVocabStats() {
-  if (typeof VOCAB_DB === "undefined" || VOCAB_DB.length === 0) return { pct: 0, learned: 0, total: 0 };
-  let total = VOCAB_DB.length;
-  let scoreSum = 0; 
-  let maxPossibleScore = total * 4; 
-
-  for (const card of VOCAB_DB) {
-    const lvl = vocabLevels[card.id] || 0;
-    scoreSum += lvl; 
-  }
-  let startedCount = VOCAB_DB.filter(card => (vocabLevels[card.id] || 0) > 0).length;
-  const pct = maxPossibleScore > 0 ? Math.round((scoreSum / maxPossibleScore) * 100) : 0;
-  return { pct: pct, learned: startedCount, total: total };
-}
+const vocabLevels = load("srpski-vocab-levels-v3", {});
+let vocabDirection = load("srpski-vocab-dir", "sr-ru"); // "sr-ru" или "ru-sr"
 
 function openVocabModal() {
   if (typeof VOCAB_DB === "undefined" || VOCAB_DB.length === 0) {
@@ -2361,129 +2824,267 @@ function openVocabModal() {
     return;
   }
 
-  let sessionQueue = VOCAB_DB.filter(card => {
-    const lvl = vocabLevels[card.id] || 0;
-    return lvl < 4;
-  });
-
-  if (sessionQueue.length === 0) {
-    if (confirm("Све речи су савладане! Желите ли да ресетујете и поновите градиво?")) {
-      for(const id in vocabLevels) vocabLevels[id] = 0;
-      store("srpski-vocab-levels-v1", vocabLevels);
-      sessionQueue = [...VOCAB_DB];
+  // Фильтруем слова (берем те, что еще не на максимальном 4 уровне)
+  let queue = VOCAB_DB.filter(card => (vocabLevels[card.id] || 0) < 4);
+  if (queue.length === 0) {
+    if (confirm("Све речи су савладане на максимални ниво! Желите ли да ресетујете напредак?")) {
+      for (const id in vocabLevels) vocabLevels[id] = 0;
+      store("srpski-vocab-levels-v3", vocabLevels);
+      queue = [...VOCAB_DB];
     } else {
       return;
     }
   }
 
-  sessionQueue = shuffle(sessionQueue).slice(0, 12);
-  startVocabSession(sessionQueue);
-}
+  // Берем сессию по 10 случайных слов
+  queue = shuffle(queue).slice(0, 10);
 
-function startVocabSession(queue) {
-  cur = { isVocab: true, queue: queue, index: 0, phase: "question" };
+  cur = {
+    isVocab: true,
+    queue: queue,
+    index: 0,
+    phase: "question"
+  };
 
   homeEl.hidden = true;
   lessonEl.hidden = false;
   $("#rule-btn").hidden = true;
   $("#reset").hidden = true;
 
-  els.title.innerHTML = `<small><span class="level-pill" style="background:#0284c7;">КАРТИЦЕ</span> · Речник</small><b>Интервално понављање</b>`;
-  els.sections.innerHTML = "";
-  els.track.innerHTML = "";
-
-  renderVocabCard();
+  renderVocabStep();
   window.scrollTo(0, 0);
 }
 
-function renderVocabCard() {
+// Функция мягкой нормализации текста для проверки
+function cleanVocabInput(str) {
+  if (!str) return "";
+  return String(str)
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[.,!?;:"«»„“”'’…()]/g, "")
+    .trim();
+}
+
+function renderVocabStep() {
   const card = cur.queue[cur.index];
   const currentLvl = vocabLevels[card.id] || 0;
+  const isSrRu = vocabDirection === "sr-ru";
 
-  els.exercise.className = "card";
-  els.exercise.innerHTML = `
-    <div class="card-meta">
-      <div class="card-breadcrumbs">
-        <span class="level-pill" style="background:#0284c7;">НИВО ${currentLvl}/4</span>
-        <span class="crumb-lesson">Картица ${cur.index + 1} од ${cur.queue.length}</span>
+  const frontText = isSrRu ? card.sr : card.ru;
+  const backText = isSrRu ? card.ru : card.sr;
+
+  // Шапка сессии и переключатель направления прямо на экране
+  els.title.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+      <div>
+        <small><span class="level-pill" style="background:#0284c7;">КАРТИЦЕ</span> · НИВО ${currentLvl}/4</small>
+        <b>${isSrRu ? '🇷🇸 Српски ➔ 🇷🇺 Руски' : '🇷🇺 Руски ➔ 🇷🇸 Српски'}</b>
       </div>
-    </div>
-    
-    <div style="text-align: center; padding: 30px 10px;">
-      <div style="font-size: 28px; font-weight: 700; font-family: var(--display); margin-bottom: 12px;" lang="sr">
-        ${card.sr} ${speakButtonHTML(card.sr)}
-      </div>
-      <div id="vocab-answer-box" style="margin-top: 20px; min-height: 60px;">
-        <button class="secondary" id="vocab-show-btn" style="max-width: 200px; margin: 0 auto;">Прикажи превод</button>
-      </div>
+      <button id="vocab-toggle-dir" class="secondary" style="font-size: 12px; padding: 4px 10px; height: 30px; width: auto; background: var(--surface-2);">
+        🔄 Смени смер
+      </button>
     </div>
   `;
 
-  $("#vocab-show-btn").addEventListener("click", () => {
-    const ansBox = $("#vocab-answer-box");
-    ansBox.innerHTML = `
-      <div style="font-size: 20px; color: var(--green); font-weight: 600; margin-bottom: 8px;">${card.ru}</div>
-      ${card.example ? `<div style="font-size: 13.5px; color: var(--ink-2); font-style: italic; margin-bottom: 20px;" lang="sr">"${card.example}"</div>` : ''}
+  $("#vocab-toggle-dir").addEventListener("click", () => {
+    vocabDirection = vocabDirection === "sr-ru" ? "ru-sr" : "sr-ru";
+    store("srpski-vocab-dir", vocabDirection);
+    renderVocabStep();
+  });
+
+  els.sections.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--ink-3); padding:4px 0;">Реч ${cur.index + 1} од ${cur.queue.length}</div>`;
+
+  renderTrackVocab();
+
+  els.exercise.className = "card";
+
+  // УСЛОВИЕ: На 4 уровне (последнем) включается режим "Впиши перевод", на уровнях 0-3 — карточки
+  if (currentLvl < 4) {
+    // РЕЖИМ 1: КАРТОЧКИ (Слово + две кнопки сразу)
+    els.exercise.innerHTML = `
+      <div class="card-meta">
+        <div class="card-breadcrumbs">
+          <span class="level-pill" style="background:#0284c7;">Самопровера</span>
+          <span class="crumb-lesson">Картица ${cur.index + 1} / ${cur.queue.length}</span>
+        </div>
+      </div>
       
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 320px; margin: 0 auto;">
-        <button class="primary" id="vocab-bad" style="background: var(--red); color: #fff; height: 44px; font-size: 15px;">Заборавио сам</button>
-        <button class="primary" id="vocab-good" style="background: var(--green); color: #fff; height: 44px; font-size: 15px;">Знао сам</button>
+      <div style="text-align: center; padding: 24px 10px;">
+        <div style="font-size: 13px; color: var(--ink-3); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">
+          ${isSrRu ? 'Преведите на руски' : 'Преведите на српски'}
+        </div>
+        <div style="font-size: 30px; font-weight: 700; font-family: var(--display); margin-bottom: 20px;" lang="${isSrRu ? 'sr' : 'ru'}">
+          ${frontText} ${isSrRu ? speakButtonHTML(frontText) : ''}
+        </div>
+
+        <!-- Скрытый блок перевода (появляется при нажатии любой из кнопок) -->
+        <div id="vocab-card-back" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--line); display: none; animation: rise 0.2s ease;">
+          <div style="font-size: 24px; color: var(--green); font-weight: 700; margin-bottom: 6px;" lang="${isSrRu ? 'ru' : 'sr'}">
+            ${backText} ${!isSrRu ? speakButtonHTML(backText) : ''}
+          </div>
+          ${card.example ? `<div style="font-size: 14px; color: var(--ink-2); font-style: italic; margin-top: 8px;" lang="sr">„${card.example}“</div>` : ''}
+        </div>
       </div>
     `;
 
-    $("#vocab-bad").addEventListener("click", () => handleVocabAnswer(card.id, false));
-    $("#vocab-good").addEventListener("click", () => handleVocabAnswer(card.id, true));
-  });
+    // Две кнопки сразу в панели действий (actionbar)
+    els.bar.innerHTML = `
+      <div id="vocab-action-buttons" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;">
+        <button class="primary" id="vocab-btn-forget" style="background: var(--surface-2); color: var(--ink); border: 1.5px solid var(--line); font-size: 15px;">Не знам</button>
+        <button class="primary" id="vocab-btn-remember" style="background: var(--green); color: #fff; font-size: 15px;">Знам</button>
+      </div>
+    `;
 
-  els.bar.innerHTML = "";
-}
+    // Кнопка "Не знаю" (показываем перевод, фиксируем ошибку, убираем кнопку "Знаю")
+    $("#vocab-btn-forget").addEventListener("click", () => {
+      $("#vocab-card-back").style.display = "block";
+      // Оставляем только одну кнопку "Даље" (или переводим интерфейс в режим ошибки)
+      els.bar.innerHTML = `
+        <button class="primary" id="vocab-btn-next" style="background: var(--red); color: #fff; font-size: 16px;">
+          · Даље →
+        </button>
+      `;
+      $("#vocab-btn-next").addEventListener("click", () => {
+        processVocabResult(card, false);
+      });
+    });
 
-function handleVocabAnswer(cardId, remembered) {
-  let lvl = vocabLevels[cardId] || 0;
-  if (remembered) {
-    if (lvl < 4) lvl++;
+    // Кнопка "Знаю" (показываем перевод, фиксируем успех, даем кнопку "Даље")
+    $("#vocab-btn-remember").addEventListener("click", () => {
+      $("#vocab-card-back").style.display = "block";
+      els.bar.innerHTML = `
+        <button class="primary" id="vocab-btn-next" style="background: var(--green); color: #fff; font-size: 16px;">
+          · Даље →
+        </button>
+      `;
+      $("#vocab-btn-next").addEventListener("click", () => {
+        processVocabResult(card, true);
+      });
+    });
+
   } else {
-    lvl = 0; 
-  }
-  vocabLevels[cardId] = lvl;
-  store("srpski-vocab-levels-v1", vocabLevels);
-
-  if (cur.index < cur.queue.length - 1) {
-    cur.index++;
-    renderVocabCard();
-  } else {
-    cur.phase = "done";
-    els.sections.innerHTML = "";
-    els.track.innerHTML = "";
-
-    const total = cur.queue.length;
-
-    els.exercise.className = "card";
+    // РЕЖИМ 2: ВПИШИ ПРЕВОД (Для 4 уровня)
     els.exercise.innerHTML = `
-      <div class="finish">
-        <div class="stolnjak"><b>Одлично!</b></div>
-        <div class="rakija">${RAKIJA}</div>
-        <div class="finish-num">${total}<span> / ${total}</span></div>
-        <p>Картице су успешно поновљене! Меморија је ојачана.</p>
-        <div class="row">
-          <button class="secondary" id="vocab-again">Понови још једном</button>
+      <div class="card-meta">
+        <div class="card-breadcrumbs">
+          <span class="level-pill" style="background:var(--green);">Мајсторски ниво</span>
+          <span class="crumb-lesson">Упиши превод</span>
         </div>
-      </div>`;
+      </div>
+      
+      <div style="text-align: center; padding: 20px 10px;">
+        <div style="font-size: 13px; color: var(--ink-3); margin-bottom: 8px; text-transform: uppercase;">
+          Упишите превод за:
+        </div>
+        <div style="font-size: 28px; font-weight: 700; font-family: var(--display); margin-bottom: 16px;" lang="${isSrRu ? 'sr' : 'ru'}">
+          ${frontText} ${speakButtonHTML(frontText)}
+        </div>
 
-    $("#vocab-again").addEventListener("click", openVocabModal);
+        <div style="margin: 20px auto; max-width: 320px;">
+          <input type="text" id="vocab-type-input" class="blank" style="width: 100%; font-size: 20px; padding: 10px; text-align: center;" placeholder="Унесите превод..." autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
 
-    els.bar.innerHTML = `<button class="primary" id="vocab-to-home">Назад на почетну страну</button>`;
-    $("#vocab-to-home").addEventListener("click", () => {
-      cur.isVocab = false;
-      lessonEl.hidden = true;
-      homeEl.hidden = false;
-      renderDashboard();
-      window.scrollTo(0, 0);
+        <div id="vocab-type-feedback" style="margin-top: 10px; font-weight: 600; min-height: 24px;"></div>
+      </div>
+    `;
+
+    const inp = $("#vocab-type-input");
+    if (!isSrRu) {
+      inp.addEventListener("focus", () => showVirtualKeyboard(inp));
+      inp.addEventListener("blur", () => setTimeout(() => hideVirtualKeyboard(), 120));
+    }
+    inp.focus();
+
+    els.bar.innerHTML = `<button class="primary" id="vocab-check-type" style="background: #0284c7; color: #fff;">Проверите</button>`;
+    
+    $("#vocab-check-type").addEventListener("click", () => {
+      const userClean = cleanVocabInput(inp.value);
+      const rightClean = cleanVocabInput(backText);
+
+      const isOk = userClean === rightClean || rightClean.split("/").map(s => cleanVocabInput(s)).includes(userClean);
+
+      const fb = $("#vocab-type-feedback");
+      if (isOk) {
+        fb.style.color = "var(--green)";
+        fb.textContent = "Тачно! Одлично познавање речи!";
+        inp.classList.add("right");
+        inp.readOnly = true;
+        els.bar.innerHTML = `<button class="primary" id="vocab-next-type" style="background: var(--green); color: #fff;">Даље →</button>`;
+        $("#vocab-next-type").addEventListener("click", () => processVocabResult(card, true));
+      } else {
+        fb.style.color = "var(--red)";
+        fb.innerHTML = `Нетачно. Тачан одговор: <b style="color:var(--ink);">${backText}</b>`;
+        inp.classList.add("wrong");
+        inp.readOnly = true;
+        els.bar.innerHTML = `<button class="primary" id="vocab-next-type" style="background: var(--red); color: #fff;">Даље →</button>`;
+        $("#vocab-next-type").addEventListener("click", () => processVocabResult(card, false));
+      }
     });
   }
 }
 
-/* ================= КАРТА УРОКОВ (ВОЗВРАЩЕНА НА МЕСТО) ================= */
+function renderTrackVocab() {
+  els.track.innerHTML = cur.queue.map((_, i) => {
+    let c = (i === cur.index) ? "cur" : (i < cur.index) ? "ok" : "";
+    return `<i class="${c}"></i>`;
+  }).join("");
+}
+
+function processVocabResult(card, remembered) {
+  hideVirtualKeyboard();
+  let lvl = vocabLevels[card.id] || 0;
+  
+  if (remembered) {
+    if (lvl < 4) lvl++;
+  } else {
+    lvl = 0; // Сбрасываем уровень при ошибке
+    // Если не вспомнил — добавляем карточку в конец очереди этой сессии для повторения
+    cur.queue.push(card);
+  }
+  
+  vocabLevels[card.id] = lvl;
+  store("srpski-vocab-levels-v3", vocabLevels);
+
+  if (cur.index < cur.queue.length - 1) {
+    cur.index++;
+    renderVocabStep();
+  } else {
+    finishVocabSession();
+  }
+}
+
+function finishVocabSession() {
+  cur.phase = "done";
+  els.sections.innerHTML = "";
+  els.track.innerHTML = "";
+
+  const total = cur.queue.length;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="finish">
+      <div class="stolnjak"><b>Сјајно!</b></div>
+      <div class="rakija">${RAKIJA}</div>
+      <div class="finish-num">${total}<span> / ${total}</span></div>
+      <p>Сесија понављања речи је успешно завршена!</p>
+      <div class="row">
+        <button class="secondary" id="vocab-again">Понови још једном</button>
+      </div>
+    </div>`;
+
+  $("#vocab-again").addEventListener("click", openVocabModal);
+
+  els.bar.innerHTML = `<button class="primary" id="vocab-to-home" style="background: #0284c7; color: #fff;">Назад на почетну страну</button>`;
+  $("#vocab-to-home").addEventListener("click", () => {
+    cur.isVocab = false;
+    lessonEl.hidden = true;
+    homeEl.hidden = false;
+    renderDashboard();
+    window.scrollTo(0, 0);
+  });
+}
+
+/* ================= КАРТА УРОКОВ ================= */
 
 function renderLessonsMap() {
   let totalAll = 0, doneAll = 0;
@@ -2532,6 +3133,16 @@ function renderLessonsMap() {
       </div>
     </header>
 
+    <!-- ИСПИТНИ ЦЕНТАР ТЕПЕРЬ ВНУТРИ ЛЕКЦИЙ -->
+    <button id="btn-open-exam-modal" style="width: 100%; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #111a2b, #1f2937); color: #fff; border-radius: 16px; padding: 16px 18px; margin-bottom: 16px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.06); text-align: left;">
+      <div>
+        <div style="font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--sign-yellow); margin-bottom: 3px;">Центр знања</div>
+        <div style="font-family: var(--display); font-size: 16px; font-weight: 700; margin-bottom: 2px;">Испитни центар</div>
+        <div style="font-size: 12px; opacity: 0.8;">Тестови, дијагностика и исправка грешака</div>
+      </div>
+      <div style="font-family: var(--display); font-size: 20px; background: rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;">🎯</div>
+    </button>
+
     <nav class="level-tabs" aria-label="Нивои">
       ${Object.keys(tabMap).map(k => `
         <button class="level-tab${activeTab === k ? ' active' : ''}" data-tab="${k}">
@@ -2547,6 +3158,7 @@ function renderLessonsMap() {
   `;
 
   $("#btn-dash-back").addEventListener("click", renderDashboard);
+  $("#btn-open-exam-modal").addEventListener("click", openExamModal); // Привязка модалки экзамена
 
   homeEl.querySelectorAll(".level-tab").forEach(tab => {
     tab.addEventListener("click", () => {
@@ -2565,7 +3177,6 @@ function renderLessonsMap() {
     });
   });
 }
-
 /* ================================================================= */
 /* МОДУЛЬ РЕПОРТОВ ОБ ОШИБКАХ (Админка, счетчик и кнопка) */
 /* ================================================================= */
