@@ -413,15 +413,31 @@ function getListenStats() {
 
 function getQuizStats() {
   if (typeof QUIZ_DB === "undefined") return { pct: 0, points: 0 };
-  let maxTotal = 0, userTotal = 0;
+  
+  let maxTotalPoints = 0; // Максимально возможное количество баллов по всей базе
+  let userTotalPoints = 0; // Сколько баллов реально заработал пользователь
+
+  // Считаем максимум по всей базе QUIZ_DB
   for (const [id, data] of Object.entries(QUIZ_DB)) {
-    maxTotal += data.format === "fill" ? 2 : 1;
-    if (quizProgress[id] === true) {
-      userTotal += data.format === "fill" ? 2 : 1;
+    const p = data.format === "fill" ? 2 : 1;
+    maxTotalPoints += p;
+  }
+
+  // Считаем заработанные баллы из сохраненного прогресса quizProgress (srpski-quiz-v1)
+  const qProg = load("srpski-quiz-v1", {});
+  if (qProg && typeof qProg === "object") {
+    for (const [id, val] of Object.entries(qProg)) {
+      // Если сохранено число баллов (или старый формат true -> считаем как 1 балл)
+      if (typeof val === "number") {
+        userTotalPoints += val;
+      } else if (val === true && QUIZ_DB[id]) {
+        userTotalPoints += (QUIZ_DB[id].format === "fill" ? 2 : 1);
+      }
     }
   }
-  const pct = maxTotal > 0 ? Math.round((userTotal / maxTotal) * 100) : 0;
-  return { pct: pct, points: userTotal };
+
+  const pct = maxTotalPoints > 0 ? Math.min(100, Math.round((userTotalPoints / maxTotalPoints) * 100)) : 0;
+  return { pct: pct, points: userTotalPoints };
 }
 
 function getReadStats() {
@@ -727,8 +743,56 @@ function getSmartMinutkeQueue() {
 
 function toggleMinutkeRead(id, event) {
   event.stopPropagation(); // Чтобы клик по кнопке не открывал что-то лишнее
-  minutkeProgress[id] = !minutkeProgress[id];
+  
+  const isCurrentlyDone = !!minutkeProgress[id];
+  minutkeProgress[id] = !isCurrentlyDone;
   store("srpski-minutke-v1", minutkeProgress);
+
+  // ==========================================
+  // ДОБАВЛЕННЫЙ БЛОК: ПРОКАЧКА СЛОВ ДО УРОВНЯ 2
+  // ==========================================
+  // Если карточку отметили как ИЗУЧЕННУЮ (а до этого она была не изучена)
+  if (!isCurrentlyDone) {
+    // Ищем саму карточку в базе МИНУТКОК (MINUTKE_DB)
+    const minutkeItem = MINUTKE_DB.find(m => String(m.id) === String(id));
+    
+    if (minutkeItem && minutkeItem.vocabIds && Array.isArray(minutkeItem.vocabIds) && minutkeItem.vocabIds.length > 0) {
+      let currentLevels = {};
+      try {
+        const rawLvl = localStorage.getItem("srpski-vocab-levels-v3");
+        currentLevels = rawLvl ? JSON.parse(rawLvl) : {};
+        if (typeof currentLevels !== "object" || currentLevels === null) currentLevels = {};
+      } catch (e) {
+        currentLevels = {};
+      }
+
+      let upgradedCount = 0;
+
+      // Проходим по каждому ID слова в карточке мини-минутки
+      minutkeItem.vocabIds.forEach(vocabId => {
+        const key = String(vocabId);
+        let lvl = Number(currentLevels[key]) || 0;
+
+        // Ограничение: поднимаем уровень только если он меньше 2 (то есть 0 или 1).
+        // Если слово уже на 2, 3 или 4 уровне — оно не меняется.
+        if (lvl < 2) {
+          currentLevels[key] = lvl + 1;
+          upgradedCount++;
+        }
+      });
+
+      if (upgradedCount > 0) {
+        localStorage.setItem("srpski-vocab-levels-v3", JSON.stringify(currentLevels));
+        
+        // Синхронизируем с глобальной переменной vocabLevels, если она используется в приложении
+        if (typeof vocabLevels !== 'undefined') {
+          Object.assign(vocabLevels, currentLevels);
+        }
+        console.log(`[Мини-минутки] Карточка ${id}: слова прокачаны до уровня 2 (обновлено слов: ${upgradedCount})`);
+      }
+    }
+  }
+  // ==========================================
 
   // Перерисовываем только барабан на главной, чтобы обновился статус кнопки
   const drumContainer = $("#drum-section-container");
@@ -1618,13 +1682,33 @@ function check() {
     q.result = ok; 
     listenProgress[cur.id][cur.index] = ok;
     saveListenProgress();
-  } else if (cur.isQuiz) {
+} else if (cur.isQuiz) {
     const q = cur.quizQueue[cur.index];
     q.result = ok; 
-    if (ok || quizProgress[cur.id] !== true) {
-      quizProgress[cur.id] = ok;
-      store("srpski-quiz-v1", quizProgress);
+
+    // 1. Безопасно загружаем объект прогресса из localStorage
+    let qProg = load("srpski-quiz-v1", {});
+    if (typeof qProg !== "object" || qProg === null) qProg = {};
+
+    const qId = q.id; // уникальный ID вопроса (например, "qz-ftv-001")
+    const questionFormat = q.item.format; // "choice" или "fill"
+    const pointsWorth = questionFormat === "fill" ? 2 : 1; // 2 бода за fill, 1 за choice
+
+    // 2. Начисляем очки, если ответили верно
+    if (ok) {
+      if (!qProg[qId]) {
+        qProg[qId] = pointsWorth; 
+      }
+    } else {
+      if (qProg[qId] === undefined) {
+        qProg[qId] = 0;
+      }
     }
+    
+    // 3. Сохраняем в localStorage (НЕ перезаписываем константу quizProgress напрямую!)
+    store("srpski-quiz-v1", qProg);
+
+    // 4. Прокачиваем слова (максимум до 3 уровня)
     rewardWordsForQuizQuestion(q.item, ok);
   } else if (cur.isRead) {
     const q = cur.queue[cur.index];
@@ -3279,12 +3363,13 @@ function rewardWordsForQuizQuestion(questionItem, isCorrect) {
   }
 
   let upgradedCount = 0;
-  // Повышаем уровень слов на +1 за правильный ответ в квизе
+  // Повышаем уровень слов на +1 за правильный ответ в квизе, но НЕ выше 3-го уровня
   questionItem.vocabIds.forEach(vocabId => {
     const key = String(vocabId);
     let lvl = Number(currentLevels[key]) || 0;
 
-    if (lvl < 4) {
+    // Ограничение: поднимаем уровень только если он меньше 3 (то есть 0, 1 или 2)
+    if (lvl < 3) {
       currentLevels[key] = lvl + 1;
       upgradedCount++;
     }
@@ -3295,7 +3380,7 @@ function rewardWordsForQuizQuestion(questionItem, isCorrect) {
     if (typeof vocabLevels !== 'undefined') {
       Object.assign(vocabLevels, currentLevels);
     }
-    console.log(`[Лексика - Квиз] Успешно увечан ниво за ${upgradedCount} речи.`);
+    console.log(`[Лексика - Квиз] Успешно увеличен уровень до 3 для ${upgradedCount} слов.`);
   }
 }
 
@@ -3472,7 +3557,7 @@ function rewardWordsForCompletedRead(chapterData) {
     const key = String(vocabId);
     let lvl = Number(currentLevels[key]) || 0;
 
-    if (lvl < 4) {
+    if (lvl < 3) {
       currentLevels[key] = lvl + 1;
       upgradedCount++;
       console.log(`[Лексика - Итог чтения] Уникальное слово ID ${key}: уровень ${lvl} ➔ ${lvl + 1}`);
