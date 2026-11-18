@@ -1676,6 +1676,9 @@ function check() {
     if (ok && progress[q.lessonId]?.[q.secName]) {
       progress[q.lessonId][q.secName][q.itemIdx] = true;
       saveProgress();
+      
+      // ИСПИТНИ ЦЕНТАР: прокачиваем слова до 3 уровня (lvl < 3)
+      rewardWordsForExamItem(q.item, ok);
     }
   } else if (cur.isListen) {
     const q = cur.queue[cur.index];
@@ -1722,10 +1725,13 @@ function check() {
     // ДЛЯ ОБЫЧНЫХ УРОКОВ (Lessons)
     const ri = realIndex();
     if (progress[cur.id] && progress[cur.id][cur.section]) {
-      // Записываем true, если ответили верно. Если ошиблись, можно ставить false или оставлять незаполненным. 
-      // Стандартная логика тренажера ставит false при ошибке, чтобы задание ушло в конец очереди на повтор:
       progress[cur.id][cur.section][ri] = ok ? true : false;
       saveProgress();
+
+      // ОБЫЧНЫЕ УРОКИ: прокачиваем слова до 2 уровня (lvl < 2)
+      if (ok) {
+        rewardWordsForLessonItem(item(), ok);
+      }
     }
   }
   // ==========================================
@@ -3347,6 +3353,75 @@ function renderQuizQuestion() {
   bindExercise(it.format, it);
   els.exercise.querySelector(".tools")?.remove();
   renderBar();
+}
+
+// ПРОКАЧКА СЛОВ В УРОКАХ И ЭКЗАМЕНЕ
+// Функция прокачки слов для ОБЫЧНЫХ УРОКОВ (максимум до уровня 2)
+function rewardWordsForLessonItem(item, isCorrect) {
+  if (!isCorrect || !item.vocabIds || !Array.isArray(item.vocabIds)) return;
+
+  let currentLevels = {};
+  try {
+    const rawLvl = localStorage.getItem("srpski-vocab-levels-v3");
+    currentLevels = rawLvl ? JSON.parse(rawLvl) : {};
+    if (typeof currentLevels !== "object" || currentLevels === null) currentLevels = {};
+  } catch (e) {
+    currentLevels = {};
+  }
+
+  let upgradedCount = 0;
+  item.vocabIds.forEach(vocabId => {
+    const key = String(vocabId);
+    let lvl = Number(currentLevels[key]) || 0;
+
+    // Максимальный уровень для обычных уроков — 2 (lvl < 2)
+    if (lvl < 2) {
+      currentLevels[key] = lvl + 1;
+      upgradedCount++;
+    }
+  });
+
+  if (upgradedCount > 0) {
+    localStorage.setItem("srpski-vocab-levels-v3", JSON.stringify(currentLevels));
+    if (typeof vocabLevels !== 'undefined') {
+      Object.assign(vocabLevels, currentLevels);
+    }
+    console.log(`[Лексика - Урок] Успешно увеличен уровень до 2 для ${upgradedCount} слов.`);
+  }
+}
+
+// Функция прокачки слов для ИСПИТНОГО ЦЕНТРА (максимум до уровня 3)
+function rewardWordsForExamItem(item, isCorrect) {
+  if (!isCorrect || !item.vocabIds || !Array.isArray(item.vocabIds)) return;
+
+  let currentLevels = {};
+  try {
+    const rawLvl = localStorage.getItem("srpski-vocab-levels-v3");
+    currentLevels = rawLvl ? JSON.parse(rawLvl) : {};
+    if (typeof currentLevels !== "object" || currentLevels === null) currentLevels = {};
+  } catch (e) {
+    currentLevels = {};
+  }
+
+  let upgradedCount = 0;
+  item.vocabIds.forEach(vocabId => {
+    const key = String(vocabId);
+    let lvl = Number(currentLevels[key]) || 0;
+
+    // Максимальный уровень для Экзаменационного центра — 3 (lvl < 3)
+    if (lvl < 3) {
+      currentLevels[key] = lvl + 1;
+      upgradedCount++;
+    }
+  });
+
+  if (upgradedCount > 0) {
+    localStorage.setItem("srpski-vocab-levels-v3", JSON.stringify(currentLevels));
+    if (typeof vocabLevels !== 'undefined') {
+      Object.assign(vocabLevels, currentLevels);
+    }
+    console.log(`[Лексика - Экзамен] Успешно увеличен уровень до 3 для ${upgradedCount} слов.`);
+  }
 }
 
 // ФУНКЦИЯ ПРОКАЧКИ СЛОВ ДЛЯ КВИЗОВ (аналог чтения)
