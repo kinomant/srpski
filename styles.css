@@ -897,3 +897,91 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
   border-color: var(--green);
   color: var(--green);
 }
+
+.pm-tabs-scroll::-webkit-scrollbar { display: none; }
+.pm-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 99px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pm-tab-btn small {
+  font-size: 11px;
+  opacity: 0.75;
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 99px;
+}
+.pm-tab-btn.active {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.pm-tab-btn.active small {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+/* Фильтры тем в разделе Аудио приче */
+.pm-filter-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.pm-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pm-filter-chip:hover {
+  border-color: var(--blue);
+}
+
+.pm-chip-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pm-chip-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  padding: 2px 7px;
+  border-radius: 8px;
+  margin-left: 2px;
+}
+
+.pm-filter-chip.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(29, 67, 201, 0.22);
+}
+
+.pm-filter-chip.active .pm-chip-count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
