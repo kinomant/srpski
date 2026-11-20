@@ -441,15 +441,18 @@ function getQuizStats() {
 }
 
 function getReadStats() {
-  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0 };
-  const keys = Object.keys(READ_DB);
-  const totalTexts = keys.length;
-  let readTexts = 0;
-  for (const id of keys) {
-    if (readProgress[id] === true) readTexts++;
+  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0, total: 0 };
+  let totalChapters = 0;
+  let readChapters = 0;
+  for (const bookKey of Object.keys(READ_DB)) {
+    const chList = READ_DB[bookKey].chapters || [];
+    chList.forEach(ch => {
+      totalChapters++;
+      if (readProgress[ch.id] === true) readChapters++;
+    });
   }
-  const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
-  return { pct, texts: readTexts, total: totalTexts };
+  const pct = totalChapters > 0 ? Math.round((readChapters / totalChapters) * 100) : 0;
+  return { pct, texts: readChapters, total: totalChapters };
 }
 
 function getVocabPct() { return 0; }
@@ -2729,7 +2732,7 @@ function finishRead() {
       </div>
     </div>`;
 
-  $("#read-again").addEventListener("click", () => startReadSession(cur.readId));
+  $("#read-again").addEventListener("click", () => startReadSession(cur.bookKey, cur.readId));
   
   els.bar.innerHTML = `<button class="primary" id="read-to-home">Назад на списак текстова</button>`;
   $("#read-to-home").addEventListener("click", () => {
