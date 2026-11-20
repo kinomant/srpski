@@ -572,11 +572,11 @@ function getUserLevelInfo() {
 
   // Пороги уровней (накопительные, не падают при добавлении нового контента)
   const tiers = [
-    { name: "A1", title: "Почетник",            min: 0,    max: 500,  next: "A2", color: "#10b981" },
-    { name: "A2", title: "Основе језика",       min: 500,  max: 1400, next: "B1", color: "#0284c7" },
-    { name: "B1", title: "Самостални говорник", min: 1400, max: 2600, next: "B2", color: "#7b2cbf" },
-    { name: "B2", title: "Напредни ниво",       min: 2600, max: 4000, next: "C1", color: "#d06015" },
-    { name: "C1", title: "Мајстор језика",      min: 4000, max: 6000, next: "C2", color: "#e11d48" }
+    { name: "A1", title: "Почетник",            min: 0,    max: 400,  next: "A2", color: "#10b981" },
+    { name: "A2", title: "Основе језика",       min: 400,  max: 1000, next: "B1", color: "#0284c7" },
+    { name: "B1", title: "Самостални говорник", min: 1000, max: 2000, next: "B2", color: "#7b2cbf" },
+    { name: "B2", title: "Напредни ниво",       min: 2000, max: 3500, next: "C1", color: "#d06015" },
+    { name: "C1", title: "Мајстор језика",      min: 3500, max: 5000, next: "C2", color: "#e11d48" }
   ];
 
   let curTier = tiers[0];
@@ -2460,14 +2460,18 @@ function finishListen() {
 /* ================================================================= */
 
 function getReadStats() {
-  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0 };
-  const totalTexts = Object.keys(READ_DB).length;
-  let readTexts = 0;
-  for (const id in READ_DB) {
-    if (readProgress[id] === true) readTexts++;
+  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0, total: 0 };
+  let totalChapters = 0;
+  let readChapters = 0;
+  for (const bookKey of Object.keys(READ_DB)) {
+    const chList = READ_DB[bookKey].chapters || [];
+    chList.forEach(ch => {
+      totalChapters++;
+      if (readProgress[ch.id] === true) readChapters++;
+    });
   }
-  const pct = totalTexts > 0 ? Math.round((readTexts / totalTexts) * 100) : 0;
-  return { pct, texts: readTexts };
+  const pct = totalChapters > 0 ? Math.round((readChapters / totalChapters) * 100) : 0;
+  return { pct, texts: readChapters, total: totalChapters };
 }
 
 // 1. Показ каталога книг
