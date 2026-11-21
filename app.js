@@ -620,6 +620,18 @@ function renderDashboard() {
   const readStats = getReadStats(); 
   const levelInfo = getUserLevelInfo(); 
 
+// Считаем прогресс по разделу Аудио приче в минутах (как в Видеотеке)
+  let pmTotalMins = 0, pmDoneMins = 0;
+  if (typeof PRICAJ_MI_DB !== "undefined") {
+    const pmProg = load("srpski-pm-progress-v1", {});
+    for (const [id, data] of Object.entries(PRICAJ_MI_DB)) {
+      const mins = Number(data.readTimeMins) || 0;
+      pmTotalMins += mins;
+      if (pmProg[id] === true) pmDoneMins += mins;
+    }
+  }
+  const pmPct = pmTotalMins > 0 ? Math.round((pmDoneMins / pmTotalMins) * 100) : 0;
+
   // Безопасно считаем прогресс по словарю для карточки
   const vocabBreakdown = (typeof getVocabLevelsBreakdown === "function") ? getVocabLevelsBreakdown() : { mastered: 0, total: (typeof VOCAB_DB !== "undefined" ? VOCAB_DB.length : 0) };
   const masteredCount = vocabBreakdown.mastered;
@@ -698,7 +710,7 @@ function renderDashboard() {
       ${buildCard('mod-btn-lex', 'Граматика', 'Правила, вежбе и испит', lexPct, 'm-lex', `<span style="font-size:16px">${lexPct}%</span>`)}
       ${buildCard('mod-btn-listen', 'Видеотека', 'Емисије и живи говор', listenStats.pct, 'm-listen', `<span style="font-size:16px">${listenStats.doneMins}</span><span style="font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px;">мин</span>`)}
       ${buildCard('mod-btn-quiz', 'Квизови', 'Култура, спорт, друштво', quizStats.pct, 'm-quiz', `<span style="font-size:15px">${quizStats.points}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">бодова</span>`)}
-      ${buildCard('mod-btn-pricaj', 'Аудио приче', 'Кратке приче и глас', 0, 'm-pricaj', `<span style="font-size:20px">🎧</span>`)}
+      ${buildCard('mod-btn-pricaj', 'Аудио приче', 'Кратке приче и глас', pmPct, 'm-pricaj', `<span style="font-size:16px">${pmDoneMins}</span><span style="font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px;">мин</span>`)}
       ${buildCard('mod-btn-words', 'Речник', 'Тренинг и памћење речи', vocabPct, 'm-words', `<span style="font-size:15px">${masteredCount}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">/${vocabTotal}</span>`)}
       ${buildCard('mod-btn-read', 'Читање', 'Текстови и превод', readStats.pct, 'm-read', `<span style="font-size:16px">${readStats.texts}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">текстова</span>`)}   
     </div>
@@ -745,87 +757,6 @@ function renderDashboard() {
   setTimeout(() => {
     updateAdminReportsCounter();
   }, 50);
-}
-
-function renderLessonsMap() {
-  let totalAll = 0, doneAll = 0;
-  for (const id of ALL_IDS) { 
-    const s = lessonStats(id); 
-    totalAll += s.total; 
-    doneAll += s.done; 
-  }
-  const overallPct = totalAll ? Math.round(doneAll / totalAll * 100) : 0;
-
-  const tabMap = {
-    a2: { title: "A2 Экспресс", ids: LINE_A2_IDS, class: "l-a2" },
-    b1: { title: "B1 Каркас", ids: LINE_B1_IDS, class: "l-b1" },
-    b2: { title: "B2 Беглая речь", ids: LINE_B2_IDS, class: "l-b2" },
-    c1: { title: "C1 Мастерство", ids: LINE_C1_IDS, class: "l-c1" },
-    lex: { title: "Лексика", ids: LINE_LEX_IDS, class: "l-lex" }
-  };
-  const currentTabInfo = tabMap[activeTab] || tabMap.a2;
-
-  const getTabSub = (ids) => {
-    let completed = 0;
-    ids.forEach(id => {
-      const s = lessonStats(id);
-      if (s.total > 0 && s.done === s.total) completed++;
-    });
-    return completed === ids.length ? "✓" : `${completed}/${ids.length}`;
-  };
-
-  homeEl.innerHTML = `
-    <header class="header-bar" style="position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 16px 0 10px; margin-bottom: 8px;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <button class="icon-btn" id="btn-dash-back" aria-label="Назад">
-          <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2 2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;">Граматика</h2>
-      </div>
-      
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <div class="header-badge">
-          <div class="hb-bar"><i style="width:${overallPct}%"></i></div>
-          <span>${doneAll} / ${totalAll}</span>
-        </div>
-        <button class="theme-toggle-btn" type="button" aria-label="Смени тему">
-          ${curTheme === "dark" ? SUN_ICON : MOON_ICON}
-        </button>
-      </div>
-    </header>
-
-    <nav class="level-tabs" aria-label="Нивои">
-      ${Object.keys(tabMap).map(k => `
-        <button class="level-tab${activeTab === k ? ' active' : ''}" data-tab="${k}">
-          <span class="tab-title">${k.toUpperCase()}</span>
-          <span class="tab-sub">${getTabSub(tabMap[k].ids)}</span>
-        </button>
-      `).join("")}
-    </nav>
-
-    <ol class="route ${currentTabInfo.class}">
-      ${currentTabInfo.ids.map(id => stop(id, ALL_IDS.indexOf(id) + 1)).join("")}
-    </ol>
-  `;
-
-  $("#btn-dash-back").addEventListener("click", renderDashboard);
-
-  homeEl.querySelectorAll(".level-tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-      activeTab = tab.dataset.tab;
-      store("srpski-active-tab", activeTab);
-      renderLessonsMap();
-    });
-  });
-
-  homeEl.querySelectorAll(".route [data-id]").forEach(el => {
-    el.addEventListener("click", () => {
-      const id = el.dataset.id;
-      const last = load(LAST_KEY, null);
-      const sec = last && last.id === id ? last.section : null;
-      openLesson(id, sec);
-    });
-  });
 }
 
 /* ================================================================= */
@@ -2459,21 +2390,6 @@ function finishListen() {
 /* ДВИЖОК РАЗДЕЛА "ЧИТАЊЕ" (Антологија српске књижевности) */
 /* ================================================================= */
 
-function getReadStats() {
-  if (typeof READ_DB === "undefined") return { pct: 0, texts: 0, total: 0 };
-  let totalChapters = 0;
-  let readChapters = 0;
-  for (const bookKey of Object.keys(READ_DB)) {
-    const chList = READ_DB[bookKey].chapters || [];
-    chList.forEach(ch => {
-      totalChapters++;
-      if (readProgress[ch.id] === true) readChapters++;
-    });
-  }
-  const pct = totalChapters > 0 ? Math.round((readChapters / totalChapters) * 100) : 0;
-  return { pct, texts: readChapters, total: totalChapters };
-}
-
 // 1. Показ каталога книг
 function openReadCatalog() {
   if (typeof READ_DB === "undefined" || Object.keys(READ_DB).length === 0) {
@@ -3672,55 +3588,6 @@ function rewardWordsForQuizQuestion(questionItem, isCorrect) {
     console.log(`[Лексика - Квиз] Успешно увеличен уровень до 3 для ${upgradedCount} слов.`);
   }
 }
-
-function finishQuiz() {
-  cur.phase = "done";
-  renderQuizTrack();
-  els.sections.innerHTML = "";
-
-  const total = cur.quizQueue.length;
-  const correct = cur.quizQueue.filter(q => q.result === true).length;
-  
-  let earnedPoints = 0;
-  cur.quizQueue.forEach(q => {
-    if (q.result === true) earnedPoints += (q.item.format === "fill" ? 2 : 1);
-  });
-
-  els.exercise.className = "card";
-  els.exercise.innerHTML = `
-    <div class="finish">
-      <div class="stolnjak"><b>${correct >= total * 0.7 ? "Браво мајсторе!" : "Солидно!"}</b></div>
-      <div class="finish-num">${correct}<span> / ${total}</span></div>
-      <p style="font-size:16px; font-weight:600; color:var(--ink); margin: 6px 0 20px;">
-        Освојили сте око <b>${earnedPoints} бодова</b> у овој сесији!
-      </p>
-      <div class="row">
-        <button class="secondary" id="quiz-to-home">Назад на почетну страну</button>
-      </div>
-    </div>`;
-
-  // Сбрасываем кастомный клик назад при завершении квиза
-  const backBtn = $("#back");
-  if (backBtn) backBtn.onclick = null;
-
-  $("#quiz-to-home").addEventListener("click", () => {
-    cur.isQuiz = false;
-    lessonEl.hidden = true;
-    homeEl.hidden = false;
-    renderDashboard();
-    window.scrollTo(0, 0);
-  });
-  
-  els.bar.innerHTML = `<button class="primary" id="quiz-to-home-bar">Назад на почетну страну</button>`;
-  $("#quiz-to-home-bar").addEventListener("click", () => {
-    cur.isQuiz = false;
-    lessonEl.hidden = true;
-    homeEl.hidden = false;
-    renderDashboard();
-    window.scrollTo(0, 0);
-  });
-}
-
 /* ================= ПРОКАЧКА СЛОВ ДЛЯ РАЗДЕЛА "ПРИЧАЈ МИ" ================= */
 function rewardWordsForCompletedPricajMi(pmId, questionsList) {
   if (!questionsList || !Array.isArray(questionsList)) return;
@@ -4099,48 +3966,6 @@ function renderTrackVocab() {
   }).join("");
 }
 
-function finishVocabSession() {
-  cur.phase = "done";
-  
-  // Финальный рендер трека (все точки окрашиваются согласно результатам)
-  els.track.innerHTML = cur.queue.map((_, i) => {
-    const res = cur.vocabSessionResults[i];
-    const c = (res && res.remembered) ? "ok" : "bad";
-    return `<i class="${c}"></i>`;
-  }).join("");
-
-  els.sections.innerHTML = "";
-
-  const total = cur.queue.length;
-  // Считаем только те карточки, где пользователь ответил, что знает
-  const knownCount = cur.vocabSessionResults.filter(r => r && r.remembered).length;
-
-  els.exercise.className = "card";
-  els.exercise.innerHTML = `
-    <div class="finish">
-      <div class="stolnjak"><b>Сесија завршена!</b></div>
-      <div class="rakija">${RAKIJA}</div>
-      <div class="finish-num">${knownCount}<span> / ${total}</span></div>
-      <p style="font-size:15px; color:var(--ink-2); margin-top: 8px;">
-        Успешно сте савладали ${knownCount} од ${total} речи. Речи које нисте знали враћене су на поновно учење.
-      </p>
-      <div class="row" style="margin-top: 20px;">
-        <button class="secondary" id="vocab-again">Понови сесију</button>
-      </div>
-    </div>`;
-
-  $("#vocab-again").addEventListener("click", openVocabModal);
-
-  els.bar.innerHTML = `<button class="primary" id="vocab-to-home" style="background: #0284c7; color: #fff;">Назад на почетну страну</button>`;
-  $("#vocab-to-home").addEventListener("click", () => {
-    cur.isVocab = false;
-    lessonEl.hidden = true;
-    homeEl.hidden = false;
-    renderDashboard();
-    window.scrollTo(0, 0);
-  });
-}
-
 /* ================= КАРТА УРОКОВ ================= */
 
 function renderLessonsMap() {
@@ -4176,7 +4001,7 @@ function renderLessonsMap() {
         <button class="icon-btn" id="btn-dash-back" aria-label="Назад">
           <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2 2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;">Лекције</h2>
+       <h2 style="margin: 0; font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;">Граматика</h2>
       </div>
       
       <div style="display: flex; align-items: center; gap: 8px;">
