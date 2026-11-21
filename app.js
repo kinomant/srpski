@@ -1857,7 +1857,7 @@ function check() {
     }
     saveExamErrors();
 
-    if (ok && progress[q.lessonId]?.[q.secName]) {
+    if (ok && !q.isFromListenDB && progress[q.lessonId]?.[q.secName]) {
       progress[q.lessonId][q.secName][q.itemIdx] = true;
       saveProgress();
       
@@ -2662,6 +2662,7 @@ function finishRead() {
 }
 
 /* ================= 5. ЭКЗАМЕНАЦИОННЫЙ ЦЕНТР ================= */
+
 let examConfig = { mode: "daily", level: "a2", count: 24 };
 
 function getExamAvailableCounts() {
@@ -2671,9 +2672,17 @@ function getExamAvailableCounts() {
       const items = LESSONS[id].sections[sec].items;
       const pArr = progress[id]?.[sec] || [];
       items.forEach((it, idx) => {
-        if (pArr[idx] === false) mistakes++;
-        if (it.ytId) video++;
+        const errKey = `${id}:${sec}:${idx}`;
+        if (pArr[idx] === false || examErrors[errKey] === true) mistakes++;
+        if (it.ytId || it.ytid || it.videoId) video++;
       });
+    }
+  }
+  // Если в LISTEN_DB (Видеотеке) есть вопросы, учитываем и их тоже
+  if (typeof LISTEN_DB !== "undefined") {
+    for (const vidId in LISTEN_DB) {
+      const qs = LISTEN_DB[vidId].questions || [];
+      video += qs.length;
     }
   }
   return { mistakes, video };
@@ -2692,6 +2701,10 @@ function buildExamQueue(cfg) {
     for (const secName in l.sections) {
       const sec = l.sections[secName];
       sec.items.forEach((it, idx) => {
+        // Нормализуем ytId на случай разного регистра букв в базе
+        if (!it.ytId && (it.ytid || it.videoId)) {
+          it.ytId = it.ytid || it.videoId;
+        }
         const status = progress[lessonId]?.[secName]?.[idx] ?? null;
         allQuestions.push({ lessonId, secName, itemIdx: idx, item: it, format: sec.format, intro: sec.intro, status, lvl });
       });
@@ -2705,7 +2718,38 @@ function buildExamQueue(cfg) {
       return q.status === false || examErrors[errKey] === true;
     })).slice(0, cfg.count);
   } else if (cfg.mode === "video") {
-    finalQueue = shuffle(allQuestions.filter(q => !!q.item.ytId)).slice(0, cfg.count);
+    // 1. Берем все задания с ytId из уроков (LESSONS)
+    let videoPool = allQuestions.filter(q => !!q.item.ytId);
+
+    // 2. Если в уроках их мало или нет, добавляем видео-вопросы из Видеотеки (LISTEN_DB)
+    if (typeof LISTEN_DB !== "undefined") {
+      const firstLessonId = ALL_IDS[0];
+      const firstSecName = Object.keys(LESSONS[firstLessonId].sections)[0];
+      for (const [vidId, vData] of Object.entries(LISTEN_DB)) {
+        (vData.questions || []).forEach((qItem, qIdx) => {
+          const startSec = qItem.hintTime ? Math.max(0, qItem.hintTime - 5) : 0;
+          const endSec = qItem.hintTime ? qItem.hintTime + 35 : undefined;
+          const clonedItem = {
+            ...qItem,
+            ytId: vidId,
+            start: qItem.start ?? startSec,
+            end: qItem.end ?? endSec
+          };
+          videoPool.push({
+            lessonId: firstLessonId,
+            secName: firstSecName,
+            itemIdx: qIdx,
+            item: clonedItem,
+            format: qItem.format || "choice",
+            intro: vData.title || "Погледајте видео одломак и одговорите на питање.",
+            status: null,
+            lvl: "vid",
+            isFromListenDB: true
+          });
+        });
+      }
+    }
+    finalQueue = shuffle(videoPool).slice(0, cfg.count);
   } else if (cfg.mode === "level") {
     finalQueue = shuffle(allQuestions.filter(q => q.lvl === cfg.level)).slice(0, cfg.count);
   } else if (cfg.mode === "placement") {
@@ -2731,7 +2775,10 @@ function buildExamQueue(cfg) {
 function startCustomExam(cfg) {
   const queue = buildExamQueue(cfg);
   if (queue.length === 0) {
-    alert("Нема забележених питања за изабрани режим (нпр. тренутно немате грешака).");
+    const msg = cfg.mode === "mistakes"
+      ? "Тренутно немате забележених грешака за исправку! 🎉"
+      : "Нема пронађених питања за изабрани режим.";
+    alert(msg);
     return;
   }
   cur.isExam = true;
