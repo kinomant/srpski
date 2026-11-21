@@ -985,3 +985,13 @@ s { text-decoration-thickness: 1.5px; color: var(--red); }
   background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
 }
+
+/* Цвет кольца прогресса для Видео-вежбы */
+.mod-card.m-vvezba .mod-ring .bar {
+  stroke: #e11d48;
+}
+
+/* Опционально: если на дэшборде нечётное число карточек (7), 7-я займёт всю ширину */
+.modules-grid .mod-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}

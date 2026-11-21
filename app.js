@@ -397,6 +397,20 @@ if (typeof LISTEN_DB !== "undefined") {
 }
 const saveListenProgress = () => store("srpski-listen-v1", listenProgress);
 
+const videoVezbeProgress = load("srpski-video-vezbe-v1", {});
+const saveVideoVezbeProgress = () => store("srpski-video-vezbe-v1", videoVezbeProgress);
+
+function getVideoVezbeStats() {
+  if (typeof VIDEO_VEZBE_DB === "undefined" || !Array.isArray(VIDEO_VEZBE_DB)) {
+    return { pct: 0, done: 0, total: 0, mistakes: 0 };
+  }
+  const total = VIDEO_VEZBE_DB.length;
+  const done = VIDEO_VEZBE_DB.filter(it => videoVezbeProgress[it.id] === true).length;
+  const mistakes = VIDEO_VEZBE_DB.filter(it => videoVezbeProgress[it.id] === false).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return { pct, done, total, mistakes };
+}
+
 /* ================= ФУНКЦИИ РАСЧЕТА ПРОГРЕССА ================= */
 
 function getListenStats() {
@@ -567,8 +581,12 @@ function getUserLevelInfo() {
   }
   const minutkeXP = minutkeDone * 1;
 
-  const practiceXP = listenXP + pmXP + readXP + quizXP + minutkeXP;
+// 8. Видео-вежба: +2 XP за каждое решённое видеоупражнение
+  const vvXP = (getVideoVezbeStats().done || 0) * 2;
+
+  const practiceXP = listenXP + pmXP + readXP + quizXP + minutkeXP + vvXP;
   const totalXP = grammarXP + vocabXP + practiceXP;
+
 
   // Пороги уровней (накопительные, не падают при добавлении нового контента)
   const tiers = [
@@ -605,6 +623,9 @@ function getUserLevelInfo() {
 }
 
 function renderDashboard() {
+  
+  const vvStats = getVideoVezbeStats();
+
   // 1. Считаем лекции
   let totalAll = 0, doneAll = 0;
   for (const id of ALL_IDS) { 
@@ -708,11 +729,12 @@ function renderDashboard() {
     <!-- Сетка модулей -->
     <div class="modules-grid">
       ${buildCard('mod-btn-lex', 'Граматика', 'Правила, вежбе и испит', lexPct, 'm-lex', `<span style="font-size:16px">${lexPct}%</span>`)}
+      ${buildCard('mod-btn-vvezba', 'Видео-вежба', 'Граматика из живог говора', vvStats.pct, 'm-vvezba', `<span style="font-size:15px">${vvStats.done}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">/${vvStats.total}</span>`)}
       ${buildCard('mod-btn-listen', 'Видеотека', 'Емисије и живи говор', listenStats.pct, 'm-listen', `<span style="font-size:16px">${listenStats.doneMins}</span><span style="font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px;">мин</span>`)}
       ${buildCard('mod-btn-quiz', 'Квизови', 'Култура, спорт, друштво', quizStats.pct, 'm-quiz', `<span style="font-size:15px">${quizStats.points}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">бодова</span>`)}
       ${buildCard('mod-btn-pricaj', 'Аудио приче', 'Кратке приче и глас', pmPct, 'm-pricaj', `<span style="font-size:16px">${pmDoneMins}</span><span style="font-size:10px; color:var(--ink-3); font-weight:600; margin-top:2px;">мин</span>`)}
-      ${buildCard('mod-btn-words', 'Речник', 'Тренинг и памћење речи', vocabPct, 'm-words', `<span style="font-size:15px">${masteredCount}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">/${vocabTotal}</span>`)}
-      ${buildCard('mod-btn-read', 'Читање', 'Текстови и превод', readStats.pct, 'm-read', `<span style="font-size:16px">${readStats.texts}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">текстова</span>`)}   
+      ${buildCard('mod-btn-read', 'Читање', 'Текстови и превод', readStats.pct, 'm-read', `<span style="font-size:16px">${readStats.texts}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">текстова</span>`)}
+      ${buildCard('mod-btn-words', 'Речник', 'Тренинг и памћење речи', vocabPct, 'm-words', `<span style="font-size:15px">${masteredCount}</span><span style="font-size:9.5px; color:var(--ink-3); font-weight:600; margin-top:2px;">/${vocabTotal}</span>`)}   
     </div>
 
     <!-- Карточка-барабан с мини-минутками -->
@@ -741,6 +763,7 @@ function renderDashboard() {
   $("#mod-btn-quiz").addEventListener("click", openQuizMenu);   
   $("#mod-btn-read").addEventListener("click", openReadCatalog);
   $("#mod-btn-pricaj").addEventListener("click", openPricajMiCatalog);
+  $("#mod-btn-vvezba").addEventListener("click", openVideoVezbeModal);
 
   // Привязываем клики по галочкам барабана
   bindDrumEvents();
@@ -1402,26 +1425,28 @@ function goHome() {
   const isVocab = cur.isVocab;
   const isRead = cur.isRead;
   const isPricajMi = cur.isPricajMi;
+  const isVideoVezba = cur.isVideoVezba;
   
-  // Если мы были в режиме чтения книги/главы и нажали общую кнопку "Назад" в шапке
   if (isRead) {
-      exitReadSession();
-      return;
-    }
+    exitReadSession();
+    return;
+  }
 
-  // Если мы были в режиме Pričaj mi и нажали общую кнопку "Назад" в шапке
   if (isPricajMi) {
     cur.isPricajMi = false;
-    openPricajMiCatalog(); // Возвращаем в список историй Pričaj mi
+    openPricajMiCatalog();
     return;
   }
   
   cur.isExam = false;
   cur.isListen = false;
   cur.isVocab = false;
+  cur.isVideoVezba = false;
   
   const svb = $("#sticky-video-box");
   if (svb) { svb.innerHTML = ""; svb.hidden = true; }
+  // Останавливаем YouTube-плеер, чтобы звук не продолжал играть в фоне
+  if (isVideoVezba || isExam) els.exercise.innerHTML = "";
 
   $("#rule-btn").hidden = false;
   $("#reset").hidden = false;
@@ -1430,7 +1455,7 @@ function goHome() {
   closeRule();
   
   if (isListen) renderListenMap();
-  else if (isExam || isVocab) renderDashboard();
+  else if (isExam || isVocab || isVideoVezba) renderDashboard();
   else renderLessonsMap();
   
   window.scrollTo(0, 0);
@@ -1441,7 +1466,21 @@ function section() {
     const q = cur.examQueue[cur.index];
     return LESSONS[q.lessonId].sections[q.secName];
   }
+  if (cur.isVideoVezba && cur.vvQueue && cur.vvQueue[cur.index]) {
+    const q = cur.vvQueue[cur.index];
+    return LESSONS[q.lessonId]?.sections?.[q.section] || { format: q.format || "choice", intro: q.intro || "" };
+  }
   return LESSONS[cur.id]?.sections[cur.section];
+}
+
+function item() {
+  if (cur.isExam && cur.examQueue && cur.examQueue[cur.index]) {
+    return cur.examQueue[cur.index].item;
+  }
+  if (cur.isVideoVezba && cur.vvQueue && cur.vvQueue[cur.index]) {
+    return cur.vvQueue[cur.index];
+  }
+  return section()?.items[realIndex()];
 }
 
 function realIndex() {
@@ -1451,12 +1490,6 @@ function realIndex() {
   return cur.order ? cur.order[cur.index] : 0;
 }
 
-function item() {
-  if (cur.isExam && cur.examQueue && cur.examQueue[cur.index]) {
-    return cur.examQueue[cur.index].item;
-  }
-  return section()?.items[realIndex()];
-}
 
 const SESSION_LIMIT = 12;
 
@@ -1652,7 +1685,7 @@ function showAnswer() {
   const it = item();
   const tipEl = $("#tip");
   if (!tipEl) return;
-  const fmt = section().format;
+  const fmt = (cur.isVideoVezba && it.format) ? it.format : section()?.format;
   let ansText = "";
 
   if (fmt === "order" || fmt === "video-order") {
@@ -1741,6 +1774,7 @@ function drawSlot() {
 
 function hasAnswer() {
   const fmt = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].format 
+            : (cur.isVideoVezba && cur.vvQueue) ? (cur.vvQueue[cur.index].format || section()?.format)
             : (cur.isListen && cur.queue) ? cur.queue[cur.index].format 
             : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item.format
             : (cur.isRead && cur.queue) ? cur.queue[cur.index].format
@@ -1774,13 +1808,15 @@ function check() {
   if (!hasAnswer()) return;
 
   const it = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].item 
-           : (cur.isListen && cur.queue) ? cur.queue[cur.index] 
-           : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item 
-           : (cur.isRead && cur.queue) ? cur.queue[cur.index] 
-           : item();
+          : (cur.isVideoVezba && cur.vvQueue) ? cur.vvQueue[cur.index]
+          : (cur.isListen && cur.queue) ? cur.queue[cur.index] 
+          : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item 
+          : (cur.isRead && cur.queue) ? cur.queue[cur.index] 
+          : item();
   if (!it) return;
 
   const fmt = (cur.isExam && cur.examQueue) ? cur.examQueue[cur.index].format 
+            : (cur.isVideoVezba && cur.vvQueue) ? (cur.vvQueue[cur.index].format || section()?.format)
             : (cur.isListen && cur.queue) ? cur.queue[cur.index].format 
             : (cur.isQuiz && cur.quizQueue) ? cur.quizQueue[cur.index].item.format 
             : (cur.isRead && cur.queue) ? cur.queue[cur.index].format 
@@ -1841,7 +1877,7 @@ function check() {
   // ==========================================
   // ИСПРАВЛЕНИЕ: СОХРАНЕНИЕ ПРОГРЕССА ОБЫЧНОГО УРОКА
   // ==========================================
-  if (cur.isExam) {
+    if (cur.isExam) {
     const q = cur.examQueue[cur.index];
     q.result = ok;
 
@@ -1864,6 +1900,14 @@ function check() {
       // ИСПИТНИ ЦЕНТАР: прокачиваем слова до 3 уровня (lvl < 3)
       rewardWordsForExamItem(q.item, ok);
     }
+    } else if (cur.isVideoVezba) {
+  const q = cur.vvQueue[cur.index];
+  q.result = ok;
+  videoVezbeProgress[q.id] = ok;
+  saveVideoVezbeProgress();
+  if (ok) {
+    rewardWordsForLessonItem(q, ok);
+  }
   } else if (cur.isListen) {
     const q = cur.queue[cur.index];
     q.result = ok; 
@@ -1924,6 +1968,7 @@ function check() {
   cur.phase = "result";
   
   if (cur.isExam) renderExamTrack();
+  else if (cur.isVideoVezba) renderVideoVezbaTrack();
   else if (cur.isListen) renderListenTrack();
   else if (cur.isQuiz) renderQuizTrack();
   else if (cur.isRead) {
@@ -1956,6 +2001,7 @@ function next() {
   if (els.bar) els.bar.innerHTML = "";
   
   const totalItems = cur.isExam ? cur.examQueue.length 
+                   : cur.isVideoVezba ? cur.vvQueue.length
                    : cur.isListen ? cur.queue.length 
                    : cur.isQuiz ? cur.quizQueue.length 
                    : cur.isRead ? cur.queue.length 
@@ -1964,6 +2010,7 @@ function next() {
   if (cur.index < totalItems - 1) {
     cur.index++;
     if (cur.isExam) renderExamQuestion();
+    else if (cur.isVideoVezba) renderVideoVezbaQuestion();
     else if (cur.isListen) renderListenQuestion();
     else if (cur.isQuiz) renderQuizQuestion();
     else if (cur.isRead) renderReadQuestion();
@@ -1971,6 +2018,7 @@ function next() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   } else {
     if (cur.isExam) finishExam();
+    else if (cur.isVideoVezba) finishVideoVezba();
     else if (cur.isListen) finishListen();
     else if (cur.isQuiz) finishQuiz();
     else if (cur.isRead) finishRead();
@@ -2059,7 +2107,9 @@ document.addEventListener("keydown", e => {
            || $("#nextsec") 
            || $("#tohome") 
            || $("#exam-to-home")
-           || $("#btn-start-exam-now");
+           || $("#vv-to-home")
+           || $("#btn-start-exam-now")
+           || $("#btn-start-vv-now");
 
   if (btn && !btn.disabled) {
     e.preventDefault();
@@ -2970,7 +3020,334 @@ function openExamModal() {
   });
 }
 
-/* ================= 6. ИМПОРТ / ЭКСПОРТ ================= */
+/* ================================================================= */
+/* МОДУЛЬ "ВИДЕО-ВЕЖБА" (С подсказками и правилами из уроков)        */
+/* ================================================================= */
+
+let vvConfig = load("srpski-vv-cfg", { mode: "mix", level: "a2", count: 12 });
+
+function getVideoVezbaLevelKey(lessonId) {
+  if (LINE_A2_IDS.includes(lessonId)) return "a2";
+  if (LINE_B1_IDS.includes(lessonId)) return "b1";
+  if (LINE_B2_IDS.includes(lessonId)) return "b2";
+  if (LINE_C1_IDS.includes(lessonId)) return "c1";
+  if (LINE_LEX_IDS.includes(lessonId)) return "lex";
+  return "a2";
+}
+
+function buildVideoVezbeQueue(cfg) {
+  if (typeof VIDEO_VEZBE_DB === "undefined" || !Array.isArray(VIDEO_VEZBE_DB)) return [];
+
+  // Создаём копии объектов, чтобы поле result не мутировало исходную базу
+  const all = VIDEO_VEZBE_DB.map(it => ({
+    ...it,
+    lvlKey: getVideoVezbaLevelKey(it.lessonId),
+    status: videoVezbeProgress[it.id] ?? null
+  }));
+
+  let pool = [];
+  if (cfg.mode === "mistakes") {
+    pool = shuffle(all.filter(it => it.status === false));
+  } else if (cfg.mode === "level") {
+    const byLvl = all.filter(it => it.lvlKey === cfg.level);
+    const bad = shuffle(byLvl.filter(it => it.status === false));
+    const fresh = shuffle(byLvl.filter(it => it.status === null));
+    const done = shuffle(byLvl.filter(it => it.status === true));
+    pool = [...bad, ...fresh, ...done];
+  } else {
+    // Умный микс: ошибки -> новые -> повтор
+    const bad = shuffle(all.filter(it => it.status === false));
+    const fresh = shuffle(all.filter(it => it.status === null));
+    const done = shuffle(all.filter(it => it.status === true));
+    pool = [...bad, ...fresh, ...done];
+  }
+
+  return cfg.count === 0 ? pool : pool.slice(0, cfg.count);
+}
+
+function openVideoVezbeModal() {
+  if (typeof VIDEO_VEZBE_DB === "undefined" || VIDEO_VEZBE_DB.length === 0) {
+    alert("Видео-вежбе су тренутно празне.");
+    return;
+  }
+
+  $("#vv-modal")?.remove();
+  const stats = getVideoVezbeStats();
+
+  // Считаем сколько заданий доступно на каждом уровне
+  const lvlCounts = { a2: 0, b1: 0, b2: 0, c1: 0, lex: 0 };
+  VIDEO_VEZBE_DB.forEach(it => {
+    const k = getVideoVezbaLevelKey(it.lessonId);
+    if (lvlCounts[k] !== undefined) lvlCounts[k]++;
+  });
+
+  if (vvConfig.mode === "mistakes" && stats.mistakes === 0) {
+    vvConfig.mode = "mix";
+  }
+
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay";
+  modal.id = "vv-modal";
+
+  modal.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <b>Видео-вежба</b>
+        <button class="tool" id="modal-close" type="button">Затвори</button>
+      </div>
+
+      <div style="text-align: center; margin: 4px 0 14px;">
+        <div style="font-size: 28px; font-weight: 700; font-family: var(--display); color: #e11d48;">
+          ${stats.done} <span style="font-size: 15px; color: var(--ink-3); font-weight: 400;">/ ${stats.total} решено</span>
+        </div>
+        <div style="font-size: 12px; color: var(--ink-3); margin-top: 2px;">Са правилима из лекција и подсказкама</div>
+      </div>
+
+      <div class="cfg-label">1. Изаберите режим:</div>
+      <div class="cfg-modes">
+        <button class="cfg-mode-btn${vvConfig.mode === 'mix' ? ' active' : ''}" data-m="mix">
+          <div><b>🎬 Умни микс</b><small>Прво грешке и нови задаци, затим понављање</small></div>
+          <span class="cfg-badge">${stats.total}</span>
+        </button>
+
+        <div class="cfg-mode-btn${vvConfig.mode === 'level' ? ' active' : ''}" data-m="level" style="flex-direction:column; align-items:stretch;">
+          <div><b>📊 По нивоима</b><small>Филтрирај видео-вежбе по нивоу лекције</small></div>
+          <div class="cfg-sublevels">
+            ${["a2","b1","b2","c1","lex"].map(l => `
+              <button type="button" class="cfg-sub-btn${vvConfig.level === l ? ' active' : ''}" data-lvl="${l}" ${lvlCounts[l] === 0 ? 'disabled style="opacity:0.45;"' : ''}>
+                ${l.toUpperCase()} (${lvlCounts[l]})
+              </button>
+            `).join("")}
+          </div>
+        </div>
+
+        <button class="cfg-mode-btn${vvConfig.mode === 'mistakes' ? ' active' : ''}" data-m="mistakes" ${stats.mistakes === 0 ? 'disabled style="opacity:0.5;"' : ''}>
+          <div><b>🔄 Исправка грешака</b><small>Само задаци у којима је била грешка</small></div>
+          <span class="cfg-badge">${stats.mistakes}</span>
+        </button>
+      </div>
+
+      <div class="cfg-label">2. Број задатака:</div>
+      <div class="cfg-counts">
+        <button class="cfg-count-btn${vvConfig.count === 12 ? ' active' : ''}" data-c="12">12</button>
+        <button class="cfg-count-btn${vvConfig.count === 24 ? ' active' : ''}" data-c="24">24</button>
+        <button class="cfg-count-btn${vvConfig.count === 0 ? ' active' : ''}" data-c="0">Све</button>
+      </div>
+
+      <button class="primary" id="btn-start-vv-now" style="margin-top:20px;">Покрени видео-вежбу →</button>
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll(".cfg-mode-btn[data-m]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      if (e.target.closest(".cfg-sub-btn") || btn.disabled) return;
+      modal.querySelectorAll(".cfg-mode-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      vvConfig.mode = btn.dataset.m;
+      store("srpski-vv-cfg", vvConfig);
+    });
+  });
+
+  modal.querySelectorAll(".cfg-sub-btn:not([disabled])").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      modal.querySelectorAll(".cfg-sub-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      vvConfig.level = btn.dataset.lvl;
+      modal.querySelectorAll(".cfg-mode-btn").forEach(b => b.classList.remove("active"));
+      modal.querySelector('[data-m="level"]').classList.add("active");
+      vvConfig.mode = "level";
+      store("srpski-vv-cfg", vvConfig);
+    });
+  });
+
+  modal.querySelectorAll(".cfg-count-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      modal.querySelectorAll(".cfg-count-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      vvConfig.count = +btn.dataset.c;
+      store("srpski-vv-cfg", vvConfig);
+    });
+  });
+
+  $("#modal-close", modal).addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  $("#btn-start-vv-now", modal).addEventListener("click", () => {
+    modal.remove();
+    startVideoVezbaSession(vvConfig);
+  });
+}
+
+function startVideoVezbaSession(cfg) {
+  const queue = buildVideoVezbeQueue(cfg);
+  if (queue.length === 0) {
+    alert("Нема пронађених видео-задатака за изабрани филтер.");
+    return;
+  }
+
+  // Сбрасываем возможный перехват кнопки Назад от других модулей
+  const backBtn = $("#back");
+  if (backBtn) backBtn.onclick = null;
+
+  cur = {
+    isVideoVezba: true,
+    vvConfig: { ...cfg },
+    vvQueue: queue,
+    index: 0,
+    id: queue[0].lessonId,
+    section: queue[0].section,
+    state: {},
+    phase: "answer"
+  };
+
+  homeEl.hidden = true;
+  lessonEl.hidden = false;
+  $("#rule-btn").hidden = false; // Кнопка "Правило" ВКЛЮЧЕНА!
+  $("#reset").hidden = true;
+
+  renderVideoVezbaQuestion();
+  window.scrollTo(0, 0);
+}
+
+function renderVideoVezbaTrack() {
+  els.track.innerHTML = cur.vvQueue.map((q, i) => {
+    let c = "";
+    if (i === cur.index && cur.phase === "answer") c = "cur";
+    else if (q.result === true) c = "ok";
+    else if (q.result === false) c = "bad";
+    return `<i class="${c}"></i>`;
+  }).join("");
+}
+
+function renderVideoVezbaQuestion() {
+  cur.phase = "answer";
+  cur.state = {};
+
+  const it = cur.vvQueue[cur.index];
+  cur.id = it.lessonId;
+  cur.section = it.section;
+
+  const l = LESSONS[it.lessonId];
+  const sec = section();
+  const fmt = it.format || sec?.format || "choice";
+  const lvl = getCurrentLevelInfo(it.lessonId);
+
+  els.title.innerHTML = `
+    <small><span class="level-pill ${lvl.cls}">${lvl.name}</span> · ВИДЕО-ВЕЖБА</small>
+    <b>${l ? l.title : it.lessonId}</b>`;
+
+  els.sections.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--ink-3); padding:4px 0;">Задатак ${cur.index + 1} од ${cur.vvQueue.length} · ${esc(it.section || "")}</div>`;
+  renderVideoVezbaTrack();
+
+  const introText = it.intro || sec?.intro || "";
+  const intro = introText ? `<p class="ex-intro">${introText}</p>` : "";
+
+  let html = "";
+  switch (fmt) {
+    case "choice": case "choice-live": case "video-choice": html = viewChoice(it); break;
+    case "case-ident": case "case-only": html = viewCase(it); break;
+    case "fill": case "fill-form": case "video-gap": html = viewFill(it); break;
+    case "find-error": html = viewFindError(it); break;
+    case "order": case "video-order": html = viewOrder(it); break;
+  }
+
+  const metaHeader = `
+    <div class="card-meta">
+      <div class="card-breadcrumbs">
+        <span class="level-pill ${lvl.cls}">${lvl.name}</span>
+        <span class="crumb-lesson">${esc(l ? l.title : it.lessonId)}</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-section">${esc(it.section || "")}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${reportButtonHTML()}
+        <div class="card-counter">${cur.index + 1} / ${cur.vvQueue.length}</div>
+      </div>
+    </div>`;
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = metaHeader + intro + html + `
+    <div class="tools">
+      <button class="tool" data-tool="hint">Подсказка</button>
+      <button class="tool" data-tool="answer">Показать ответ</button>
+    </div>
+    <div id="tip"></div>`;
+
+  bindExercise(fmt, it);
+  $("#btn-report-issue")?.addEventListener("click", () => openReportModal());
+  els.exercise.querySelector('[data-tool="hint"]')?.addEventListener("click", showHint);
+  els.exercise.querySelector('[data-tool="answer"]')?.addEventListener("click", showAnswer);
+  renderBar();
+}
+
+function finishVideoVezba() {
+  cur.phase = "done";
+  renderVideoVezbaTrack();
+  els.sections.innerHTML = "";
+  $("#rule-btn").hidden = true;
+
+  const total = cur.vvQueue.length;
+  const correct = cur.vvQueue.filter(q => q.result === true).length;
+  const mistakesList = cur.vvQueue.filter(q => q.result === false);
+
+  let reviewHTML = "";
+  if (mistakesList.length > 0) {
+    reviewHTML = `
+      <div class="exam-review-box">
+        <div class="exam-review-title">Преглед грешака (${mistakesList.length}):</div>
+        ${mistakesList.map(m => {
+          const fmt = m.format || LESSONS[m.lessonId]?.sections?.[m.section]?.format;
+          let ans = "";
+          if (fmt === "find-error") ans = `${m.words[m.err]} → ${m.correct}`;
+          else if (Array.isArray(m.ans)) ans = m.ans.join(" / ");
+          else if (m.correct) ans = m.correct.join(" ");
+          else ans = m.ans || "";
+
+          const qText = m.ru || m.sr?.replace(/___|\{\{_\}\}/g, "...") || "Задатак";
+          return `
+            <div class="exam-err-item">
+              <div class="exam-err-q">${esc(qText)}</div>
+              <div>Тачан одговор: <span class="exam-err-ans">${esc(ans)}</span></div>
+              ${m.hint || m.why ? `<div class="exam-err-why">${esc(m.hint || m.why)}</div>` : ""}
+            </div>`;
+        }).join("")}
+      </div>`;
+  }
+
+  els.exercise.className = "card";
+  els.exercise.innerHTML = `
+    <div class="finish">
+      <div class="stolnjak"><b>${correct === total ? "Живели!" : correct >= total * 0.7 ? "Браво!" : "Добар тренинг!"}</b></div>
+      ${correct === total ? `<div class="rakija">${RAKIJA}</div>` : ""}
+      <div class="finish-num">${correct}<span> / ${total}</span></div>
+      <p style="font-size:15px; color:var(--ink-2); margin: 8px 0 16px;">
+        Резултати су сачувани. Можете поново увежбати грешке у било ком тренутку.
+      </p>
+      ${reviewHTML}
+      <div class="row">
+        <button class="secondary" id="vv-again">Нова сесија</button>
+        <button class="secondary" id="vv-settings">Промени филтер</button>
+      </div>
+    </div>`;
+
+  $("#vv-again").addEventListener("click", () => startVideoVezbaSession(cur.vvConfig));
+  $("#vv-settings").addEventListener("click", () => {
+    cur.isVideoVezba = false;
+    lessonEl.hidden = true;
+    homeEl.hidden = false;
+    renderDashboard();
+    openVideoVezbeModal();
+  });
+
+  els.bar.innerHTML = `<button class="primary" id="vv-to-home">Назад на почетну страну</button>`;
+  $("#vv-to-home").addEventListener("click", () => {
+    cur.isVideoVezba = false;
+    goHome();
+  });
+}
+
+/* ================= 7. ИМПОРТ / ЭКСПОРТ ================= */
 function exportProgress() {
   const data = {
     progress: load(STORAGE_KEY, {}),
@@ -4092,8 +4469,9 @@ function openReportModal(taskContext) {
   $("#report-modal")?.remove();
 
   // Если контекст не передался, пытаемся определить его автоматически
-  if (!taskContext) {
+    if (!taskContext) {
     if (cur.isExam) taskContext = "Испитни центар";
+    else if (cur.isVideoVezba) taskContext = `Видео-вежба (${cur.vvQueue[cur.index]?.id} · ${cur.id})`;
     else if (cur.isListen) taskContext = `Слушање (Видео: ${cur.id})`;
     else if (cur.isQuiz) taskContext = `Паб Квиз (${cur.id})`;
     else if (cur.isRead) taskContext = `Читање (${cur.readId})`;
